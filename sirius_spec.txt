@@ -1,0 +1,4 @@
+spack install sirius@develop%gcc@11.2.0 ~apps ~boost_filesystem ~~scalapack +cuda cuda_arch=80 +fortran +python +ipo ~magma +memory_pool ~nlcglib +openmp ~profiler ~rocm ^intel-oneapi-mkl ^cuda@11.6.2
+
+
+spack install sirius@develop%gcc@11.2.0 ~apps ~boost_filesystem ~~scalapack +cuda cuda_arch=80 +fortran +python +ipo ~magma +memory_pool ~nlcglib +openmp ~profiler ~rocm ^cuda@11.6.2
