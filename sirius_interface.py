@@ -21,6 +21,13 @@ class siriusInterface:
     paramDict = None
     kgrid = None
     dft = None
+    dftRresult = {}
+
+    energy_tol = 1e-6
+    density_tol = 1e-6
+    initial_tol = 1e-2
+    num_dft_iter = 100
+    write_dft_ground_state = False
 
     def __init__(self, communicator: MPI.Comm, pos: np.array, lat: np.array, atomNames, pp_files, functionals, kpoints: np.array, kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :str):
         self.communicator = communicator
@@ -33,8 +40,6 @@ class siriusInterface:
         self.paramDict["parameters"]['xc_functionals'] = functionals
 
         jsonstring = json.dumps(self.paramDict)
-
-        # sc = sirius.Communicator(self.communicator)
 
         self.context = sirius.Simulation_context(jsonstring)
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
@@ -54,14 +59,33 @@ class siriusInterface:
         self.dft = sirius.DFT_ground_state(self.kgrid)
         self.dft.initial_state()
 
-    def calculate(self, pos, lat, atomNames):
+    def findGroundState(self, pos, lat):
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
         for i, p in enumerate(pos):
-            print(i, pos)
-            self.context.set_atom_positions(i, p)
+            print(i, p)
+            self.context.unit_cell().atom(i).set_position(p)
         self.dft.update()
-        result = self.dft.find(1e-6, 1e-6, 1e-2, 100, False)
-        print(json.dumps(result, indent=2))
+        self.dftRresult = self.dft.find(self.density_tol, self.energy_tol, self.initial_tol, self.num_dft_iter, self.write_dft_ground_state)
+        if not self.dftRresult['converged']:
+            print("dft calculation did not converge. Don't trust the results and increase num_dft_iter!")
+        if self.dftRresult['rho_min'] < 0:
+            print("Converged charge density has negative values. Don't trust the result")
+
+    def getEnergy(self, pos, lat):
+       self.findGroundState(pos, lat)
+       return self.dftRresult['energy']['total'] + self.dftRresult['energy']['scf_correction']
+
+    def getForces(self):
+        return self.dft.forces()
+
+    def getStress(self):
+        return self.dft.stress()
+
+    def getEnergyForcesStress(self, pos, lat):
+        return self.getEnergy(pos, lat), self.getForces() , self.getStress() 
+
+
+
 
 if __name__ == '__main__':
 
@@ -89,7 +113,15 @@ if __name__ == '__main__':
     jsonparams = "{}"
     s = siriusInterface(comm, pos, lat, atomNames, pp_files, funtionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
 
-    s.calculate(pos, lat, atomNames)
+    e, f, stress = s.getEnergyForcesStress(pos, lat)
+
+    # f.print_info()
+
+    print(e, f.total)
+    # pos[0,:] = pos[0,:] + 0.05
+    # e, f, stress = s.getEnergyForcesStress(pos, lat)
+
+    # print(e, f.total, stress.total)
     del(s)
 
     
