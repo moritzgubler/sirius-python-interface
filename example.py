@@ -36,15 +36,33 @@ def make_new_ctx(pw_cutoff, gk_cutoff):
     return ctx
 
 def main():
-    pw_cutoff = 50 # in a.u.^-1
-    gk_cutoff = 22 # in a.u.^-1
+    pw_cutoff = 20 # in a.u.^-1
+    gk_cutoff = 8 # in a.u.^-1
     ctx = make_new_ctx(pw_cutoff, gk_cutoff)
-    k = 4
+    k = 2
     kgrid = sirius.K_point_set(ctx, [k,k,k], [1,1,1], True)
     dft = sirius.DFT_ground_state(kgrid)
     dft.initial_state()
     result = dft.find(1e-6, 1e-6, 1e-2, 100, False)
     print(json.dumps(result, indent=2))
+
+
+    # Extracting stress is working: 
+    stressSirius = dft.stress()
+    print('type of siriusForces', type(stressSirius))
+    stress = stressSirius.calc_stress_total()
+    print('stress', stress)
+
+    # Now I try to extract forces
+    siriusForces = dft.forces()
+    print('type of siriusForces', type(siriusForces))
+
+    # Now I try to get the forces from ther sirius.Force object:
+    # none of those work, all return a sddk::mdarray<double, 2> object which does not seem to be python compatible
+    # forces = siriusForces.total
+    # forces = siriusForces.total()
+    forces = siriusForces.calc_forces_total()
+    print(forces)
 
 
 if __name__ == "__main__":

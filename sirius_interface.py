@@ -79,7 +79,7 @@ class siriusInterface:
         return self.dft.forces()
 
     def getStress(self):
-        return self.dft.stress()
+        return self.dft.stress().calc_stress_total()
 
     def getEnergyForcesStress(self, pos, lat):
         return self.getEnergy(pos, lat), self.getForces() , self.getStress() 
@@ -114,8 +114,6 @@ if __name__ == '__main__':
     s = siriusInterface(comm, pos, lat, atomNames, pp_files, funtionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
 
     e, f, stress = s.getEnergyForcesStress(pos, lat)
-
-    # f.print_info()
 
     print(e, f.total)
     # pos[0,:] = pos[0,:] + 0.05
