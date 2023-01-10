@@ -18,6 +18,8 @@ class siriusInterface:
 
     mpiSize = None
     mpiRank = None
+    isMaster = False
+    isWorker = False
 
     energy_tol = 1e-6
     density_tol = 1e-6
@@ -51,6 +53,13 @@ class siriusInterface:
         if 'energy_tolerance' in self.paramDict['iterative_solver']:
             self.initial_tol = self.paramDict['iterative_solver']['energy_tolerance']
 
+        self.mpiSize = communicator.Get_size()
+        self.mpiRank = communicator.Get_rank()
+        if self.mpiSize > 0 and self.mpiRank == 0:
+            self.isMaster = True
+        if self.mpiSize > 0 and self.mpiRank > 0:
+            self.isWorker = True
+
         jsonstring = json.dumps(self.paramDict)
 
         self.context = sirius.Simulation_context(jsonstring)
@@ -70,8 +79,26 @@ class siriusInterface:
         self. kgrid = sirius.K_point_set(self.context, kpoints, kshift, True)
         self.dft = sirius.DFT_ground_state(self.kgrid)
         self.dft.initial_state()
+        if self.isWorker:
+            self.worker_loop()
+
+    def worker_loop(self):
+        while True:
+            messageTag, data = self.communicator.recv()
+            if messageTag == 'findGroundState':
+                self.findGroundState(*data)
+            elif messageTag == 'exit':
+                break
+        quit()
+
+    def exit(self):
+        self.communicator.bcast(('exit', 0))
 
     def findGroundState(self, pos, lat):
+
+        if self.isMaster:
+            self.communicator.bcast(('findGroundState', [pos, lat]))
+
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
         for i, p in enumerate(pos):
             self.context.unit_cell().atom(i).set_position(p)
