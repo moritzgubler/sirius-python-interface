@@ -4,13 +4,6 @@ import numpy as np
 from mpi4py import MPI
 
 
-def createChapters(json_params):
-    chapters = ['mixer', 'settings', 'unit_cell', 'iterative_solver', 'control', 'parameters', 'nlcg', 'hubbard']
-    for chap in chapters:
-        if chap not in json_params:
-            json_params[chap] = {}
-
-
 class siriusInterface:
 
     communicator = None
@@ -23,13 +16,17 @@ class siriusInterface:
     dft = None
     dftRresult = {}
 
+    mpiSize = None
+    mpiRank = None
+
     energy_tol = 1e-6
     density_tol = 1e-6
     initial_tol = 1e-2
     num_dft_iter = 100
     write_dft_ground_state = False
 
-    def __init__(self, communicator: MPI.Comm, pos: np.array, lat: np.array, atomNames, pp_files, functionals, kpoints: np.array, kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :str):
+    def __init__(self, pos: np.array, lat: np.array, atomNames, pp_files, functionals, kpoints: np.array
+            , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :str, communicator: MPI.Comm = MPI.COMM_WORLD):
         self.communicator = communicator
         self.paramDict = json.loads(json_params)
         createChapters(self.paramDict)
@@ -38,6 +35,21 @@ class siriusInterface:
         self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
         self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
         self.paramDict["parameters"]['xc_functionals'] = functionals
+
+        if 'num_dft_iter' in self.paramDict['parameters']:
+            self.num_dft_iter = self.paramDict['parameters']['num_dft_iter']
+        # else:
+        #     self.paramDict['parameters']['num_dft_iter'] = self.num_dft_iter
+        if 'density_tol' in self.paramDict['parameters']:
+            self.density_tol = self.paramDict['parameters']['density_tol']
+        # else:
+        #     self.paramDict['parameters']['density_tol'] = self.density_tol
+        if 'energy_tol' in self.paramDict['parameters']:
+            self.energy_tol = self.paramDict['parameters']['energy_tol']
+        # else:
+        #     self.paramDict['parameters']['energy_tol'] = self.energy_tol
+        if 'energy_tolerance' in self.paramDict['iterative_solver']:
+            self.initial_tol = self.paramDict['iterative_solver']['energy_tolerance']
 
         jsonstring = json.dumps(self.paramDict)
 
@@ -62,7 +74,6 @@ class siriusInterface:
     def findGroundState(self, pos, lat):
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
         for i, p in enumerate(pos):
-            print(i, p)
             self.context.unit_cell().atom(i).set_position(p)
         self.dft.update()
         self.dftRresult = self.dft.find(self.density_tol, self.energy_tol, self.initial_tol, self.num_dft_iter, self.write_dft_ground_state)
@@ -76,20 +87,25 @@ class siriusInterface:
        return self.dftRresult['energy']['total'] + self.dftRresult['energy']['scf_correction']
 
     def getForces(self):
-        return self.dft.forces()
+        return np.array(self.dft.forces().calc_forces_total())
 
     def getStress(self):
-        return self.dft.stress().calc_stress_total()
+        return np.array(self.dft.stress().calc_stress_total())
 
     def getEnergyForcesStress(self, pos, lat):
         return self.getEnergy(pos, lat), self.getForces() , self.getStress() 
 
 
+def createChapters(json_params):
+    chapters = ['mixer', 'settings', 'unit_cell', 'iterative_solver', 'control', 'parameters', 'nlcg', 'hubbard']
+    for chap in chapters:
+        if chap not in json_params:
+            json_params[chap] = {}
 
 
 if __name__ == '__main__':
 
-    comm = MPI.COMM_WORLD
+    # comm = MPI.COMM_WORLD
 
     a0 = 5.31148326730872
     lat = np.array(
@@ -111,15 +127,15 @@ if __name__ == '__main__':
     kshift = np.array([0, 0, 0])
 
     jsonparams = "{}"
-    s = siriusInterface(comm, pos, lat, atomNames, pp_files, funtionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
+    s = siriusInterface(pos, lat, atomNames, pp_files, funtionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
 
     e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    print(e, f.total)
-    # pos[0,:] = pos[0,:] + 0.05
-    # e, f, stress = s.getEnergyForcesStress(pos, lat)
+    print(e, f)
+    pos[0,:] = pos[0,:] + 0.1
+    e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    # print(e, f.total, stress.total)
+    print(e, f, stress)
     del(s)
 
     
