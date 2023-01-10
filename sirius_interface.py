@@ -84,9 +84,18 @@ class siriusInterface:
 
     def worker_loop(self):
         while True:
-            messageTag, data = self.communicator.recv()
+            print('worker receiving message', self.mpiRank)
+            messageTag, data = self.communicator.bcast(None)
+            print('message received ', messageTag)
             if messageTag == 'findGroundState':
+                print('startcalonslave')
                 self.findGroundState(*data)
+            elif messageTag == 'energy':
+                self.getEnergy()
+            elif messageTag == 'forces':
+                self.getForces()
+            elif messageTag == 'stress':
+                self.getStress()
             elif messageTag == 'exit':
                 break
         quit()
@@ -95,9 +104,13 @@ class siriusInterface:
         self.communicator.bcast(('exit', 0))
 
     def findGroundState(self, pos, lat):
+        print('start find ',self.mpiRank)
 
         if self.isMaster:
+            print('send starting signal from master')
             self.communicator.bcast(('findGroundState', [pos, lat]))
+            # self.communicator.bsend(('findGroundState', [pos, lat]))
+            print('sending done')
 
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
         for i, p in enumerate(pos):
@@ -108,19 +121,26 @@ class siriusInterface:
             print("dft calculation did not converge. Don't trust the results and increase num_dft_iter!")
         if self.dftRresult['rho_min'] < 0:
             print("Converged charge density has negative values. Don't trust the result")
+        print('find done', self.mpiRank)
 
-    def getEnergy(self, pos, lat):
-       self.findGroundState(pos, lat)
-       return self.dftRresult['energy']['total'] + self.dftRresult['energy']['scf_correction']
+    def getEnergy(self):
+        if self.isMaster:
+            self.communicator.bcast(('energy', 0))
+        return self.dftRresult['energy']['total'] + self.dftRresult['energy']['scf_correction']
 
     def getForces(self):
+        if self.isMaster:
+            self.communicator.bcast(('forces', 0))
         return np.array(self.dft.forces().calc_forces_total())
 
     def getStress(self):
+        if self.isMaster:
+            self.communicator.bcast(('stress', 0))
         return np.array(self.dft.stress().calc_stress_total())
 
     def getEnergyForcesStress(self, pos, lat):
-        return self.getEnergy(pos, lat), self.getForces() , self.getStress() 
+        self.findGroundState(pos, lat)
+        return self.getEnergy(), self.getForces() , self.getStress() 
 
 
 def createChapters(json_params):
@@ -154,15 +174,19 @@ if __name__ == '__main__':
     kshift = np.array([0, 0, 0])
 
     jsonparams = "{}"
+    print('before')
     s = siriusInterface(pos, lat, atomNames, pp_files, funtionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
-
+    print('after')
     e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    print(e, f)
+    print(e, np.linalg.norm(f))
     pos[0,:] = pos[0,:] + 0.1
     e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    print(e, f, stress)
+    print(e, np.linalg.norm(f))
+
+    s.exit()
+
     del(s)
 
     
