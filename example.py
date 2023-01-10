@@ -61,7 +61,7 @@ def main():
     # none of those work, all return a sddk::mdarray<double, 2> object which does not seem to be python compatible
     # forces = siriusForces.total
     # forces = siriusForces.total()
-    forces = siriusForces.calc_forces_total()
+    forces = numpy.array(siriusForces.calc_forces_total())
     print(forces)
 
 
