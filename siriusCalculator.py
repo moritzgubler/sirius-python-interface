@@ -3,6 +3,7 @@ from ase import atoms
 import numpy as np
 from mpi4py import MPI
 import sirius_interface
+from ase import units
 
 class LennardJones(Calculator):
     
@@ -32,11 +33,16 @@ class LennardJones(Calculator):
 
         Calculator.calculate(self, atoms, properties, system_changes)
 
-        if 'energy' in properties or not self.check_state(atoms):
-            self.results['energy'] = self.siriusInterface.getEnergy(atoms.get_positions(), atoms.get_cell(True))
+        if not self.check_state(atoms):
+            self.siriusInterface.findGroundState(atoms.get_positions() * units.Bohr, atoms.get_cell(True) * units.Bohr)
+
+        if 'energy' in properties:
+            self.results['energy'] = self.siriusInterface.getEnergy() * units.Hartree
 
         if 'forces' in properties:
-            self.results['forces'] = self.siriusInterface.getForces()
+            self.results['forces'] = self.siriusInterface.getForces() * units.Hartree / units.Bohr
 
         if 'stress' in properties:
-            self.results['stress'] = self.siriusInterface.getStress()
+            self.results['stress'] = self.siriusInterface.getStress() * units.Hartree / units.Bohr**3
+
+if __name__ == '__main__':
