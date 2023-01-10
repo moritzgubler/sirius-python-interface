@@ -32,7 +32,7 @@ class LennardJones(Calculator):
 
         Calculator.calculate(self, atoms, properties, system_changes)
 
-        if 'energy' in properties:
+        if 'energy' in properties or not self.check_state(atoms):
             self.results['energy'] = self.siriusInterface.getEnergy(atoms.get_positions(), atoms.get_cell(True))
 
         if 'forces' in properties:
