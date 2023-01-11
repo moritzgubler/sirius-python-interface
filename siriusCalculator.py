@@ -41,10 +41,16 @@ class SIRIUS(Calculator):
             self.results['energy'] = self.siriusInterface.getEnergy() * units.Hartree
 
         if 'forces' in properties:
-            self.results['forces'] = self.siriusInterface.getForces() / (units.Hartree / units.Bohr)
+            self.results['forces'] = self.siriusInterface.getForces() * (units.Hartree / units.Bohr)
 
         if 'stress' in properties:
-            self.results['stress'] = self.siriusInterface.getStress() / ( units.Hartree / units.Bohr**3)
+            stress = self.siriusInterface.getStress() * ( units.Hartree / units.Bohr**3)
+            # stress = np.linalg.inv(atoms.get_cell(True)).T @ stress @ atoms.get_cell(True)
+            self.results['stress'] = stress
+            # self.results['stress'] = np.linalg.inv(atoms.get_cell(True)) @ self.results['stress'] @ atoms.get_cell(True).T
+
+    def recalculateBasis(self, atoms):
+        self.siriusInterface.resetSirius(atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
 
     def close(self):
         self.siriusInterface.exit()
