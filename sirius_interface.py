@@ -85,7 +85,7 @@ class siriusInterface:
             self.context.unit_cell().add_atom(self.atomNames[i], pos[i, :])
 
         self.context.initialize()
-        self.kgrid = sirius.K_point_set(self.context, self.kpoints, self.kshift, False)
+        self.kgrid = sirius.K_point_set(self.context, self.kpoints, self.kshift, True)
         self.dft = sirius.DFT_ground_state(self.kgrid)
         self.dft.initial_state()
 
@@ -125,6 +125,9 @@ class siriusInterface:
                 self.getForces()
             elif str(messageTag) == 'stress':
                 self.getStress()
+            elif str(messageTag) == 'resetSirius':
+                data = message[1]
+                self.resetSirius(*data)
             elif str(messageTag) == 'exit':
                 del(self)
                 quit()
@@ -137,9 +140,17 @@ class siriusInterface:
         # print(pos, lat)
         if self.isMaster:
             self.communicator.bcast(('findGroundState', [pos, lat]))
-            # self.communicator.bsend(('findGroundState', [pos, lat]))
 
-        self.updateSirius(pos, lat)
+        tester = np.linalg.norm(self.initialLattice - lat, axis=1) < 0.01 * np.linalg.norm(self.initialLattice, axis=1)
+
+        if False:
+            if not self.isWorker:
+                print('reset', tester)
+            self.resetSirius(pos, lat)
+        else:
+            if not self.isWorker:
+                print('update', tester)
+            self.updateSirius(pos, lat)
 
         self.dftRresult = self.dft.find(self.density_tol, self.energy_tol, self.initial_tol, self.num_dft_iter, self.write_dft_ground_state)
         if not self.dftRresult['converged']:
@@ -148,8 +159,15 @@ class siriusInterface:
             print("Converged charge density has negative values. Don't trust the result")
 
 
-    def resetSirius(pos, lat):
-        ...
+    def resetSirius(self, pos, lat):
+        if self.isMaster:
+            self.communicator.bcast(('resetSirius', [pos, lat]))
+        del(self.context)
+        del(self.kgrid)
+        del(self.dft)
+        self.createSiriusObjects(pos, lat)
+        self.initialPositions = pos
+        self.initialLattice = lat
 
 
     def updateSirius(self, pos, lat):
