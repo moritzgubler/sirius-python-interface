@@ -2,6 +2,7 @@ import sirius
 import json
 import numpy as np
 from mpi4py import MPI
+import time
 
 
 class siriusInterface:
@@ -26,12 +27,28 @@ class siriusInterface:
     initial_tol = 1e-2
     num_dft_iter = 100
     write_dft_ground_state = False
+    jsonString = ''
+    pp_files = {}
+    atomNames = []
+    initialPositions = None
+    initialLattice = None
+    kpoints = np.ones(3)
+    kshift = np.zeros(3)
 
-    def __init__(self, pos: np.array, lat: np.array, atomNames, pp_files, functionals, kpoints: np.array
+    def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
+
+        self.pp_files = pp_files
         self.communicator = communicator
         # self.paramDict = json.loads(json_params)
         self.paramDict = json_params
+        self.atomNames = atomNames
+        self.initialPositions = pos.copy()
+        self.initialLattice = lat.copy()
+        self.kpoints = kpoints
+        self.kshift = kshift
+
+
         createChapters(self.paramDict)
         # self.paramDict['parameters']['ngridk'] = kpoints
         # self.paramDict['parameters']['kshift'] = kshift
@@ -47,28 +64,30 @@ class siriusInterface:
             self.isWorker = True
 
         self.setDefaultParameters()
-        jsonstring = json.dumps(self.paramDict)
+        self.jsonString = json.dumps(self.paramDict)
 
-        self.context = sirius.Simulation_context(jsonstring)
+        self.createSiriusObjects(pos, lat)
+        if self.isWorker:
+            self.worker_loop()
+
+    def createSiriusObjects(self, pos, lat):
+        self.context = sirius.Simulation_context(self.jsonString)
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
 
-        for element in pp_files:
-            self.context.unit_cell().add_atom_type(element, pp_files[element])
-        for element in atomNames:
-            if element not in pp_files:
+        for element in self.pp_files:
+            self.context.unit_cell().add_atom_type(element, self.pp_files[element])
+        for element in self.atomNames:
+            if element not in self.pp_files:
                 print('Element has no corresponding pseudopotential file', element)
                 quit()
         
-        
         for i in range(pos.shape[0]):
-            self.context.unit_cell().add_atom(atomNames[i], pos[i, :])
+            self.context.unit_cell().add_atom(self.atomNames[i], pos[i, :])
 
         self.context.initialize()
-        self. kgrid = sirius.K_point_set(self.context, kpoints, kshift, True)
+        self.kgrid = sirius.K_point_set(self.context, self.kpoints, self.kshift, False)
         self.dft = sirius.DFT_ground_state(self.kgrid)
         self.dft.initial_state()
-        if self.isWorker:
-            self.worker_loop()
 
     def setDefaultParameters(self):
         if 'num_dft_iter' in self.paramDict['parameters']:
@@ -97,8 +116,8 @@ class siriusInterface:
         while True:
             message = self.communicator.bcast((message, data))
             messageTag = message[0]
-            data = message[1]
             if str(messageTag) == 'findGroundState':
+                data = message[1]
                 self.findGroundState(*data)
             elif str(messageTag) == 'energy':
                 self.getEnergy()
@@ -120,15 +139,25 @@ class siriusInterface:
             self.communicator.bcast(('findGroundState', [pos, lat]))
             # self.communicator.bsend(('findGroundState', [pos, lat]))
 
-        self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
-        for i, p in enumerate(pos):
-            self.context.unit_cell().atom(i).set_position(p)
-        self.dft.update()
+        self.updateSirius(pos, lat)
+
         self.dftRresult = self.dft.find(self.density_tol, self.energy_tol, self.initial_tol, self.num_dft_iter, self.write_dft_ground_state)
         if not self.dftRresult['converged']:
             print("dft calculation did not converge. Don't trust the results and increase num_dft_iter!")
         if self.dftRresult['rho_min'] < 0:
             print("Converged charge density has negative values. Don't trust the result")
+
+
+    def resetSirius(pos, lat):
+        ...
+
+
+    def updateSirius(self, pos, lat):
+        self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
+        for i, p in enumerate(pos):
+            self.context.unit_cell().atom(i).set_position(p)
+        self.dft.update()
+
 
     def getEnergy(self):
         if self.isMaster:
