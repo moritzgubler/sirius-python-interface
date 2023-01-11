@@ -98,7 +98,6 @@ class siriusInterface:
             message = self.communicator.bcast((message, data))
             messageTag = message[0]
             data = message[1]
-            # print('messagetag', mes)
             if str(messageTag) == 'findGroundState':
                 self.findGroundState(*data)
             elif str(messageTag) == 'energy':
@@ -108,11 +107,12 @@ class siriusInterface:
             elif str(messageTag) == 'stress':
                 self.getStress()
             elif str(messageTag) == 'exit':
-                break
-        quit()
+                del(self)
+                quit()
 
     def exit(self):
-        self.communicator.bcast(('exit', 0))
+        if self.isMaster:
+            self.communicator.bcast(('exit', 0))
 
     def findGroundState(self, pos, lat):
         # print(pos, lat)

@@ -35,7 +35,6 @@ class SIRIUS(Calculator):
         super().calculate(atoms, properties, system_changes)
 
         if not system_changes == []:
-            print('finding ground state')
             self.siriusInterface.findGroundState(atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
 
         if 'energy' in properties:
@@ -43,7 +42,10 @@ class SIRIUS(Calculator):
 
         if 'forces' in properties:
             self.results['forces'] = self.siriusInterface.getForces() / (units.Hartree / units.Bohr)
-            print('fc', units.Hartree / units.Bohr)
 
         if 'stress' in properties:
             self.results['stress'] = self.siriusInterface.getStress() / ( units.Hartree / units.Bohr**3)
+
+    def close(self):
+        self.siriusInterface.exit()
+        del(self.siriusInterface)

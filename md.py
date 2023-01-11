@@ -45,7 +45,7 @@ atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshi
 MaxwellBoltzmannDistribution(atoms, temperature_K=300)
 
 # We want to run MD with constant energy using the VelocityVerlet algorithm.
-dyn = VelocityVerlet(atoms, 5 * units.fs)  # 5 fs time step.
+dyn = VelocityVerlet(atoms, 5 * units.fs, logfile='-')  # 5 fs time step.
 
 
 def printenergy(a):
@@ -58,6 +58,8 @@ def printenergy(a):
 
 # Now run the dynamics
 printenergy(atoms)
-for i in range(30):
+for i in range(3):
     dyn.run(1)
     printenergy(atoms)
+
+atoms.calc.close()
