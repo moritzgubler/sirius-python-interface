@@ -35,6 +35,8 @@ class siriusInterface:
     kpoints = np.ones(3)
     kshift = np.zeros(3)
 
+    first_eval = True
+
     def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
 
@@ -143,13 +145,9 @@ class siriusInterface:
 
         tester = np.linalg.norm(self.initialLattice - lat, axis=1) < 0.01 * np.linalg.norm(self.initialLattice, axis=1)
 
-        if False:
-            if not self.isWorker:
-                print('reset', tester)
-            self.resetSirius(pos, lat)
+        if self.first_eval:
+            self.first_eval = False
         else:
-            if not self.isWorker:
-                print('update', tester)
             self.updateSirius(pos, lat)
 
         self.dftRresult = self.dft.find(self.density_tol, self.energy_tol, self.initial_tol, self.num_dft_iter, self.write_dft_ground_state)
@@ -168,6 +166,7 @@ class siriusInterface:
         self.createSiriusObjects(pos, lat)
         self.initialPositions = pos
         self.initialLattice = lat
+        self.first_eval = True
 
 
     def updateSirius(self, pos, lat):
