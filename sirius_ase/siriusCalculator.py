@@ -2,7 +2,7 @@ from ase.calculators.calculator import Calculator, all_changes
 from ase import atoms
 import numpy as np
 from mpi4py import MPI
-import sirius_interface
+import sirius_ase.sirius_interface as sirius_interface
 from ase import units
 
 class SIRIUS(Calculator):
