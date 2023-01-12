@@ -6,38 +6,45 @@ from ase.lattice.cubic import Diamond
 import ase
 from ase.build import bulk
 
-# atoms = bulk('Si', crystalstructure='diamond', )
-atoms = Diamond('Si')
+atoms = bulk('Si', crystalstructure='diamond')
+np.random.seed(7340453)
+atoms.positions = atoms.positions + 0.2 * (np.random.random(atoms.positions.shape) - 0.5)
+atoms.cell = atoms.cell + 0.2 * (np.random.random((3,3)) - 0.5)
+
+# atoms = Diamond('Si')
 print(atoms.get_global_number_of_atoms())
 
 pp_files = {'Si' : 'Si.json'}
-pw_cutoff = 360 # in a.u.^-1
-gk_cutoff = 80 # in a.u.^-1
+pw_cutoff = 450 # in a.u.^-1
+gk_cutoff = 100 # in a.u.^-1
 functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
-kpoints = np.array([3, 3, 3])
-kshift = np.array([0, 0, 0])
+kpoints = np.array([2, 2, 2])
+kshift = np.array([1, 1, 1])
 
 jsonparams = {
     'mixer': {
         'beta': 0.5,
         'max_history': 8,
-        'use_hartree': True
-        
+        'use_hartree': True,
     },
     "control" : {
         "verbosity" : 0,
-        "processing_unit" : 'gpu'
+        # "processing_unit" : 'gpu',
+        # 'spglib_tolerance' : 1e-10
     },
     'parameters': {
-        'use_symmetry': True
+        'use_symmetry': True,
+        # 'smearing_width' : 0.0001
+        'energy_tol' : 1e-7,
+        'density_tol' : 1e-8
     }
 }
 atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
 
-# print(atoms.get_potential_energy(), np.linalg.norm(atoms.get_forces()), atoms.get_stress())
+print(atoms.get_potential_energy(), np.linalg.norm(atoms.get_forces()), atoms.get_stress())
 
   # Setup: The pentagram is most fun
-pathIntTest = PathIntegrationTest(atoms, 0.2, 80, shape='circle', check_stress=True)
+pathIntTest = PathIntegrationTest(atoms, 0.2, 80, shape='circle', check_stress=True, startingPointIsOnCircle = False)
 # run the integration
 pathIntTest.integrate()
 # plot the energy and error
