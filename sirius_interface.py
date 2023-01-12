@@ -26,6 +26,7 @@ class siriusInterface:
     density_tol = 1e-6
     initial_tol = 1e-2
     num_dft_iter = 100
+    use_k_sym = True
     write_dft_ground_state = False
     jsonString = ''
     pp_files = {}
@@ -87,7 +88,7 @@ class siriusInterface:
             self.context.unit_cell().add_atom(self.atomNames[i], pos[i, :])
 
         self.context.initialize()
-        self.kgrid = sirius.K_point_set(self.context, self.kpoints, self.kshift, True)
+        self.kgrid = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
         self.dft = sirius.DFT_ground_state(self.kgrid)
         self.dft.initial_state()
 
@@ -109,6 +110,9 @@ class siriusInterface:
 
         if not 'electronic_structure_method' in self.paramDict['parameters']:
             self.paramDict['parameters']['electronic_structure_method'] = 'pseudopotential'
+        
+        if 'use_symmetry' in self.paramDict['parameters']:
+            self.use_k_sym = self.paramDict['parameters']['use_symmetry']
 
 
     def worker_loop(self):
