@@ -37,12 +37,14 @@ class siriusInterface:
     kshift = np.zeros(3)
 
     first_eval = True
+    sirius_communicator = None
 
     def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
 
         self.pp_files = pp_files
         self.communicator = communicator
+        self.sirius_communicator = sirius.make_sirius_comm(self.communicator)
         # self.paramDict = json.loads(json_params)
         self.paramDict = json_params
         self.atomNames = atomNames
@@ -74,7 +76,7 @@ class siriusInterface:
             self.worker_loop()
 
     def createSiriusObjects(self, pos, lat):
-        self.context = sirius.Simulation_context(self.jsonString)
+        self.context = sirius.Simulation_context(self.jsonString, self.sirius_communicator)
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
 
         for element in self.pp_files:
