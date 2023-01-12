@@ -1,0 +1,1 @@
+execute me with 'python example.py params.json test.extxyz out.extxyz'
