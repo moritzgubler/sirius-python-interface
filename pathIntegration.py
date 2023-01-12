@@ -44,7 +44,7 @@ atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshi
 print(atoms.get_potential_energy(), np.linalg.norm(atoms.get_forces()), atoms.get_stress())
 
   # Setup: The pentagram is most fun
-pathIntTest = PathIntegrationTest(atoms, 0.2, 80, shape='circle', check_stress=True, startingPointIsOnCircle = False)
+pathIntTest = PathIntegrationTest(atoms, 0.1, 100, shape='circle', check_stress=True, startingPointIsOnCircle = True, randomTrajectory = True)
 # run the integration
 pathIntTest.integrate()
 # plot the energy and error
