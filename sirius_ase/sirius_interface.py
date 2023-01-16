@@ -13,7 +13,7 @@ class siriusInterface:
     initLat = None
     context = None
     paramDict = None
-    kgrid = None
+    k_point_set = None
     dft = None
     dftRresult = {}
 
@@ -35,12 +35,17 @@ class siriusInterface:
     initialLattice = None
     kpoints = np.ones(3)
     kshift = np.zeros(3)
+    calcFermiEnergy = True
+    calcBandGap = True
+    bandGap = 0.0
+    fermiEnergy = 0.0
 
     first_eval = True
     sirius_communicator = None
 
     def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
-            , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
+            , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD, calcFermiEnergy = True
+            , calcBandGap = True):
 
         self.pp_files = pp_files
         self.communicator = communicator
@@ -52,6 +57,8 @@ class siriusInterface:
         self.initialLattice = lat.copy()
         self.kpoints = kpoints
         self.kshift = kshift
+        self.calcFermiEnergy = calcFermiEnergy
+        self.calcBandGap = calcBandGap
 
 
         createChapters(self.paramDict)
@@ -90,8 +97,8 @@ class siriusInterface:
             self.context.unit_cell().add_atom(self.atomNames[i], pos[i, :])
 
         self.context.initialize()
-        self.kgrid = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
-        self.dft = sirius.DFT_ground_state(self.kgrid)
+        self.k_point_set = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
+        self.dft = sirius.DFT_ground_state(self.k_point_set)
         self.dft.initial_state()
 
     def setDefaultParameters(self):
@@ -162,17 +169,24 @@ class siriusInterface:
         if self.dftRresult['rho_min'] < 0:
             print("Converged charge density has negative values. Don't trust the result")
 
+        if self.calcBandGap:
+            self.bandGap = self.k_point_set.band_gap()
+        if self.calcFermiEnergy:
+            self.fermiEnergy = self.k_point_set.energy_fermi()
+
 
     def resetSirius(self, pos, lat):
         if self.isMaster:
             self.communicator.bcast(('resetSirius', [pos, lat]))
         del(self.context)
-        del(self.kgrid)
+        del(self.kpoints)
         del(self.dft)
         self.createSiriusObjects(pos, lat)
         self.initialPositions = pos
         self.initialLattice = lat
         self.first_eval = True
+        self.bandGap = 0.0
+        self.fermiEnergy = 0.0
 
 
     def updateSirius(self, pos, lat):
