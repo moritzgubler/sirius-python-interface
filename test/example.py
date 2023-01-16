@@ -1,6 +1,7 @@
 import sirius
 import json
 import numpy
+import time
 
 def make_new_ctx(pw_cutoff, gk_cutoff):
 # lattice vectors
@@ -39,8 +40,8 @@ def main():
     pw_cutoff = 20 # in a.u.^-1
     gk_cutoff = 8 # in a.u.^-1
     ctx = make_new_ctx(pw_cutoff, gk_cutoff)
-    k = 2
-    kgrid = sirius.K_point_set(ctx, [k,k,k], [1,1,1], True)
+    k = 3
+    kgrid = sirius.K_point_set(ctx, [k,k,k], [0,0,0], True)
     dft = sirius.DFT_ground_state(kgrid)
     dft.initial_state()
     result = dft.find(1e-6, 1e-6, 1e-2, 100, False)
@@ -65,20 +66,6 @@ def main():
     print(forces)
 
     print('ef', kgrid.energy_fermi(), 'bandgap', kgrid.band_gap())
-
-    # density = dft.density()
-    # print(type(density))
-    # print(density)
-
-    # dm = density.density_matrix
-    # d1 = density.generate(kgrid)
-
-    # print('d1', type(d1), d1)
-
-    # # print(dm.shape)
-
-    # # for i in range(dm.shape[0]):
-    # #     print(dm[i, i, :, :])
 
 if __name__ == "__main__":
     main()

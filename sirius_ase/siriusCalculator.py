@@ -7,7 +7,7 @@ from ase import units
 
 class SIRIUS(Calculator):
     
-    implemented_properties = ['energy', 'forces', 'stress']
+    implemented_properties = ['energy', 'forces', 'stress', 'bandgap', 'fermienergy']
     default_parameters = {}
     nolabel = True
     siriusInterface = None
@@ -49,6 +49,20 @@ class SIRIUS(Calculator):
             stress_ase = np.linalg.inv(cell).T @ stress_sirius @ cell
             self.results['stress'] = np.array([stress_ase[0][0], stress_ase[1][1], stress_ase[2][2]
                 , stress_ase[1][2], stress_ase[0][2], stress_ase[0][1]])
+
+        if 'bandgap' in properties:
+            self.results['bandgap'] = self.siriusInterface.getBandGap() * units.Hartree
+
+        if 'fermienergy' in properties:
+            self.results['fermienergy'] = self.siriusInterface.getFermiEnergy() * units.Hartree
+
+
+    def getBandGap(self):
+        return self.get_property('bandgap')
+
+    def getFermiEnergy(self):
+        return self.get_property('fermienergy')
+
 
     def recalculateBasis(self, atoms):
         self.siriusInterface.resetSirius(atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
