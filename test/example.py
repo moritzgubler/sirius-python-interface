@@ -44,7 +44,7 @@ def main():
     dft = sirius.DFT_ground_state(kgrid)
     dft.initial_state()
     result = dft.find(1e-6, 1e-6, 1e-2, 100, False)
-    print(json.dumps(result, indent=2))
+    # print(json.dumps(result, indent=2))
 
 
     # Extracting stress is working: 
@@ -64,6 +64,21 @@ def main():
     forces = numpy.array(siriusForces.calc_forces_total())
     print(forces)
 
+    print('ef', kgrid.energy_fermi(), 'bandgap', kgrid.band_gap())
+
+    # density = dft.density()
+    # print(type(density))
+    # print(density)
+
+    # dm = density.density_matrix
+    # d1 = density.generate(kgrid)
+
+    # print('d1', type(d1), d1)
+
+    # # print(dm.shape)
+
+    # # for i in range(dm.shape[0]):
+    # #     print(dm[i, i, :, :])
 
 if __name__ == "__main__":
     main()
