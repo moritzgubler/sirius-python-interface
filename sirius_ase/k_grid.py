@@ -22,9 +22,8 @@ class kpoint:
         self.weight = weight
 
     def __str__(self) -> str:
-        strings = ["%.10f" % number for number in self.k + 0] # add zero to avoid -0.0000 in string format
+        strings = ["%.12f" % number for number in self.k + 1e-14] # add zero to avoid -0.0000 in string format
         string = str(strings)
-        # print(string)
         return string
 
     def __hash__(self):
@@ -46,14 +45,13 @@ def createGridAndWeights(kpoints = [3, 3, 3], kshift = [0, 0, 0]):
             print("Invalid ks value. all shifts must be zero or 1", ks[i])
         if ks[i] == 1:
             ks[i] = 0.5 * 1.0 / kpoints[i]
-            print('.asd', ks[i], kpoints[i])
 
     ipoint = 0
     ksetDict = {}
     for i in range(kpoints[0]):
         for j in range(kpoints[1]):
             for k in range(kpoints[2]):
-                k = np.array([i / kpoints[0] + ks[i], j / kpoints[1] + ks[j], k / kpoints[2] + ks[k]])
+                k = np.array([i / kpoints[0] + ks[0], j / kpoints[1] + ks[1], k / kpoints[2] + ks[2]])
                 kp = kpoint(k)
                 if str(kp) in ksetDict:
                     ksetDict[str(kp)].weight += 1
@@ -63,12 +61,12 @@ def createGridAndWeights(kpoints = [3, 3, 3], kshift = [0, 0, 0]):
     kset = []
 
     for k in ksetDict.values():
-        kset.append(( list(k.k), k.weight ))
+        kset.append(( list(k.k), k.weight / totalPoints ))
 
     return kset
 
 if __name__ == "__main__":
-    kset = createGridAndWeights([2, 2, 2], [0, 0, 0])
+    kset = createGridAndWeights([3, 2, 1], [0, 1, 0])
 
     for k in kset:
         print(k)
