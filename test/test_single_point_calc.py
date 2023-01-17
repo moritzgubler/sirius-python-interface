@@ -6,6 +6,8 @@ from ase.md.verlet import VelocityVerlet
 from ase import units
 import sirius_ase.siriusCalculator as siriusCalculator
 import numpy as np
+from ase.io import read
+
 
 import sqnm.vcsqnm_for_ase
 
@@ -26,8 +28,9 @@ pp_files = {'Si' : 'Si.json'}
 pw_cutoff = 400 # in a.u.^-1
 gk_cutoff = 100 # in a.u.^-1
 functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
-kpoints = np.array([3, 3, 3])
+kpoints = np.array([2, 2, 2])
 kshift = np.array([0, 0, 0])
+
 
 jsonparams = {
     'mixer': {
@@ -37,8 +40,8 @@ jsonparams = {
         
     },
     "control" : {
-        "verbosity" : 0,
-        "processing_unit" : 'auto'
+        "verbosity" : 1,
+        "processing_unit" : 'auto',
     },
     'parameters': {
         'use_symmetry': True,
@@ -52,16 +55,15 @@ jsonparams = {
 
 atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
 
-opt = sqnm.vcsqnm_for_ase.aseOptimizer(atoms, True)
-for i in range(10):
-    opt.step(atoms)
-    print(atoms.get_potential_energy(), np.linalg.norm(atoms.get_forces()), np.linalg.norm(atoms.get_stress()))
-    print('etot', atoms.get_potential_energy())
-    print('bandgap', atoms.calc.getBandGap())
-    print('fermienergy', atoms.calc.getFermiEnergy())
+# opt = sqnm.vcsqnm_for_ase.aseOptimizer(atoms, True)
+# for i in range(20):
+#     opt.step(atoms)
+#     print(atoms.get_potential_energy(), np.max(np.abs(atoms.get_forces())), np.max(np.abs((atoms.get_stress())) )
+#     print('etot', atoms.get_potential_energy())
+#     print('bandgap', atoms.calc.getBandGap())
+#     print('fermienergy', atoms.calc.getFermiEnergy())
 
 print('etot', atoms.get_potential_energy())
-print('as;ldfkjas')
 print('bandgap', atoms.calc.getBandGap())
 print('fermienergy', atoms.calc.getFermiEnergy())
 atoms.calc.close()
