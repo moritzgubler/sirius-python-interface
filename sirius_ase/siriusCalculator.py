@@ -45,8 +45,11 @@ class SIRIUS(Calculator):
 
         if 'stress' in properties:
             stress_sirius = self.siriusInterface.getStress() * ( units.Hartree / units.Bohr**3)
-            cell = atoms.get_cell(True).copy()
-            stress_ase = np.linalg.inv(cell).T @ stress_sirius @ cell
+            stress_sirius = 0.5 * (stress_sirius + stress_sirius.T)
+            cell = atoms.get_cell().copy()
+            stress_ase = np.linalg.inv(cell) @ stress_sirius @ cell
+            
+            # stress_ase = stress_sirius
             self.results['stress'] = np.array([stress_ase[0][0], stress_ase[1][1], stress_ase[2][2]
                 , stress_ase[1][2], stress_ase[0][2], stress_ase[0][1]])
 
