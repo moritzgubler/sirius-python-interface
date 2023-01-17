@@ -5,16 +5,17 @@ import numpy as np
 from ase.lattice.cubic import Diamond
 import ase
 from ase.build import bulk
+from ase.io import read
 
 atoms = bulk('Si', crystalstructure='diamond')
+# atoms = Diamond('Si')
 np.random.seed(7340453)
 atoms.positions = atoms.positions + 0.2 * (np.random.random(atoms.positions.shape) - 0.5)
 atoms.cell = atoms.cell + 0.2 * (np.random.random((3,3)) - 0.5)
 
-# atoms = Diamond('Si')
-print(atoms.get_global_number_of_atoms())
-
-pp_files = {'Si' : 'Si.json'}
+pp_files = {
+    'Si': 'Si.json'
+}
 pw_cutoff = 450 # in a.u.^-1
 gk_cutoff = 100 # in a.u.^-1
 functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
@@ -29,8 +30,7 @@ jsonparams = {
     },
     "control" : {
         "verbosity" : 0,
-        # "processing_unit" : 'gpu',
-        # 'spglib_tolerance' : 1e-10
+        "processing_unit" : 'auto'
     },
     'parameters': {
         'use_symmetry': True,
@@ -44,7 +44,7 @@ atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshi
 print(atoms.get_potential_energy(), np.linalg.norm(atoms.get_forces()), atoms.get_stress())
 
   # Setup: The pentagram is most fun
-pathIntTest = PathIntegrationTest(atoms, 0.1, 100, shape='circle', check_stress=True, startingPointIsOnCircle = True, randomTrajectory = True)
+pathIntTest = PathIntegrationTest(atoms, 0.15, 50, shape='circle', check_stress=True, startingPointIsOnCircle = True, randomTrajectory = True)
 # run the integration
 pathIntTest.integrate()
 # plot the energy and error
