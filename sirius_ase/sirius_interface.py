@@ -91,6 +91,13 @@ class siriusInterface:
 
         self.context.initialize()
         self.k_point_set = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
+        # self.k_point_set = sirius.K_point_set(self.context)
+        # weight = 1.0
+        # kpoint = np.array([0.0, 0.0, 0.0])
+        # self.k_point_set.add_kpoint(kpoint, weight)
+        # if self.mpiRank == 0:
+        #     print('Number of k points: ', self.k_point_set._num_kpoints())
+        # self.k_point_set.initialize()
         self.dft = sirius.DFT_ground_state(self.k_point_set)
         self.dft.initial_state()
 
