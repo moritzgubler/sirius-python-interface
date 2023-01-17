@@ -2,6 +2,7 @@ import sirius
 import json
 import numpy as np
 from mpi4py import MPI
+import sirius_ase.k_grid
 import time
 
 
@@ -38,6 +39,8 @@ class siriusInterface:
 
     first_eval = True
     sirius_communicator = None
+
+    useCustomeMeshGenerator = True
 
     def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
@@ -90,14 +93,24 @@ class siriusInterface:
             self.context.unit_cell().add_atom(self.atomNames[i], pos[i, :])
 
         self.context.initialize()
-        self.k_point_set = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
-        # self.k_point_set = sirius.K_point_set(self.context)
-        # weight = 1.0
-        # kpoint = np.array([0.0, 0.0, 0.0])
-        # self.k_point_set.add_kpoint(kpoint, weight)
-        # if self.mpiRank == 0:
-        #     print('Number of k points: ', self.k_point_set._num_kpoints())
-        # self.k_point_set.initialize()
+
+        kpointlist = sirius_ase.k_grid.createGridAndWeights(self.kpoints, self.kshift)
+
+        if self.useCustomeMeshGenerator: # use own mesh
+            self.k_point_set = sirius.K_point_set(self.context)
+            for k, w in kpointlist:
+                self.k_point_set.add_kpoint(np.array(k), w)
+            self.k_point_set.initialize()
+            if self.mpiRank == 0:
+                print('Number of k points: ', self.k_point_set._num_kpoints())
+                print("Kpoint, weight:")
+                for k, w in kpointlist:
+                    print(k, w)
+                print('')
+        else: # create kgrid using constructor from sirius. 
+            self.k_point_set = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
+            if self.mpiRank == 0:
+                print('Number of k points: ', self.k_point_set._num_kpoints())
         self.dft = sirius.DFT_ground_state(self.k_point_set)
         self.dft.initial_state()
 
