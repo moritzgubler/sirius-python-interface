@@ -1,4 +1,4 @@
-from PathIntegrationTest import PathIntegrationTest
+from pathIntegrationForceTest.PathIntegrationTest import PathIntegrationTest
 from ase.lattice.cubic import Diamond
 import sirius_ase.siriusCalculator as siriusCalculator
 import numpy as np
