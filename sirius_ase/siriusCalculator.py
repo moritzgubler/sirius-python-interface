@@ -46,12 +46,8 @@ class SIRIUS(Calculator):
         if 'stress' in properties:
             stress_sirius = self.siriusInterface.getStress() * ( units.Hartree / units.Bohr**3)
             stress_sirius = 0.5 * (stress_sirius + stress_sirius.T)
-            cell = atoms.get_cell().copy()
-            stress_ase = np.linalg.inv(cell) @ stress_sirius @ cell
-            
-            # stress_ase = stress_sirius
-            self.results['stress'] = np.array([stress_ase[0][0], stress_ase[1][1], stress_ase[2][2]
-                , stress_ase[1][2], stress_ase[0][2], stress_ase[0][1]])
+            self.results['stress'] = np.array([stress_sirius[0][0], stress_sirius[1][1], stress_sirius[2][2]
+                , stress_sirius[1][2], stress_sirius[0][2], stress_sirius[0][1]])
 
         if 'bandgap' in properties:
             self.results['bandgap'] = self.siriusInterface.getBandGap() * units.Hartree
