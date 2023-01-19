@@ -191,7 +191,7 @@ class siriusInterface:
         if self.isMaster:
             self.communicator.bcast(('resetSirius', [pos, lat]))
         del(self.context)
-        del(self.kpoints)
+        del(self.k_point_set)
         del(self.dft)
         self.createSiriusObjects(pos, lat)
         self.initialPositions = pos
