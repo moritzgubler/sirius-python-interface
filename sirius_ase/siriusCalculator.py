@@ -19,7 +19,7 @@ class SIRIUS(Calculator):
         super().__init__()
         self.siriusInterface = sirius_interface.siriusInterface(atom.get_scaled_positions(wrap=False),
             atom.get_cell(True) / units.Bohr, atom.get_chemical_symbols(), pp_files, functionals, 
-            kpoints, kshift, pw_cutoff, gk_cutoff, json_params)
+            kpoints, kshift, pw_cutoff, gk_cutoff, json_params, communicator=communicator)
 
 
     def calculate(
