@@ -9,8 +9,9 @@ import sys
 import ase.io
 import os
 from minimahopping.minhop import Minimahopping
+from ase.build import bulk
 
-numberOfSlaves = 3
+numberOfSlaves = 2
 slaveRankSize = 2
 globalNumberOfProcesses = numberOfSlaves * slaveRankSize + 1
 print(globalNumberOfProcesses)
@@ -63,7 +64,8 @@ if not os.path.exists(siriusJsonFileName):
     print('json file does not exist')
     quit()
 
-atoms = ase.io.read(filename=structufileName, parallel=False, index = 0)
+# atoms = ase.io.read(filename=structufileName, parallel=False, index = 0)
+atoms = bulk('Si', crystalstructure='diamond')
 
 f = open(siriusJsonFileName)
 jsonparams = json.load(f)
@@ -83,13 +85,31 @@ except KeyError:
     traceback.print_exc()
     quit()
 
+try:
 # If not master rank give group comunicator to sirius calculator
-if rank != 0:
-    # give the group communicator to the sirius calculator...
-    atoms.calc = sirius_ase.siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams, group_communicator)
-    print('Calculating energy in rank ', rank, atoms.get_potential_energy())
+    if rank != 0:
+        # give the group communicator to the sirius calculator...
+        atoms.calc = sirius_ase.siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams, group_communicator)
+        # print('Calculating energy in rank ', rank, atoms.get_potential_energy())
 
-    atoms.calc.close()
+    print('entering mh', rank)
+    # Start MPI Minimahopping
+    with Minimahopping(atoms, verbose_output=True, mdmin=1, T0=2000, dt=0.1, use_MPI=True, totalWorkers=numberOfSlaves, fmax=1e-1) as mh:
+
+        # mpi example that will run for two minutes and assumes that 1 process is used as the server and the rest (n-1) as clients.
+        # mh = Minimahopping(atoms, verbose_output=False, 
+        #    T0=2000, dt=0.1, use_MPI=True, fingerprint_threshold=5e-4, run_time='0-01:00:00', totalWorkers=numberOfSlaves)
+
+
+        mh(totalsteps=1)
+        print('mh done', rank, flush=True)
+
+    print("rank left context manager", rank, flush=True)
+finally:
+    # make sure that not a slave slave tries to close itselve.
+    if rank != 0 and group_rank == 0:
+        print("Closing calculator on rank", rank, flush=True)
+        atoms.calc.close()
 
 print("rank,", rank)
 
