@@ -74,23 +74,23 @@ class siriusInterface:
         self.setDefaultParameters()
         self.jsonString = json.dumps(self.paramDict)
 
-        self.createSiriusObjects(pos, lat)
+        self.createSiriusObjects(atomNames, pos, lat)
         if self.isWorker:
             self.worker_loop()
 
-    def createSiriusObjects(self, pos, lat):
+    def createSiriusObjects(self, atomNames: list, pos, lat):
         self.context = sirius.Simulation_context(self.jsonString, self.sirius_communicator)
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
 
         for element in self.pp_files:
             self.context.unit_cell().add_atom_type(element, self.pp_files[element])
-        for element in self.atomNames:
+        for element in atomNames:
             if element not in self.pp_files:
                 print('Element has no corresponding pseudopotential file', element)
                 quit()
         
         for i in range(pos.shape[0]):
-            self.context.unit_cell().add_atom(self.atomNames[i], pos[i, :])
+            self.context.unit_cell().add_atom(atomNames[i], pos[i, :])
 
         self.context.initialize()
 
@@ -187,15 +187,16 @@ class siriusInterface:
             print("Converged charge density has negative values. Don't trust the result")
 
 
-    def resetSirius(self, pos, lat):
+    def resetSirius(self, atomNames: list, pos, lat):
         if self.isMaster:
-            self.communicator.bcast(('resetSirius', [pos, lat]))
+            self.communicator.bcast(('resetSirius', [atomNames, pos, lat]))
         del(self.context)
         del(self.k_point_set)
         del(self.dft)
-        self.createSiriusObjects(pos, lat)
+        self.atomNames = atomNames
         self.initialPositions = pos
         self.initialLattice = lat
+        self.createSiriusObjects(atomNames, pos, lat)
         self.first_eval = True
 
 
