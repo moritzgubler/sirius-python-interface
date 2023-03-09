@@ -26,7 +26,7 @@ def aseSimulation(atoms: atoms.Atom, structufileName: str, outputFilename: str, 
         print('input and outputfile are identical. aborting')
         return
 
-    firstIteration = False
+    firstIteration = True
 
     for i in range(startIndex, endIndex):
         atom_list[i].calc = calc
