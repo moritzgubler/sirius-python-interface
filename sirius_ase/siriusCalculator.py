@@ -64,7 +64,7 @@ class SIRIUS(Calculator):
 
 
     def recalculateBasis(self, atoms):
-        self.siriusInterface.resetSirius(atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
+        self.siriusInterface.resetSirius(atoms.get_chemical_symbols(), atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
 
     def close(self):
         self.siriusInterface.exit()
