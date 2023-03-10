@@ -14,12 +14,14 @@ class SIRIUS(Calculator):
 
     def __init__(self, atom: atoms.Atom, pp_files, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float
-            , json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
+            , json_params :dict, pressure_giga_pascale = 0.0, communicator: MPI.Comm = MPI.COMM_WORLD):
 
         super().__init__()
         self.siriusInterface = sirius_interface.siriusInterface(atom.get_scaled_positions(wrap=False),
             atom.get_cell(True) / units.Bohr, atom.get_chemical_symbols(), pp_files, functionals, 
             kpoints, kshift, pw_cutoff, gk_cutoff, json_params, communicator=communicator)
+
+        self.pressure = pressure_giga_pascale * units.GPa
 
 
     def calculate(
@@ -38,7 +40,7 @@ class SIRIUS(Calculator):
             self.siriusInterface.findGroundState(atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
 
         if 'energy' in properties:
-            self.results['energy'] = self.siriusInterface.getEnergy() * units.Hartree
+            self.results['energy'] = self.siriusInterface.getEnergy() * units.Hartree + self.pressure * atoms.get_volume()
 
         if 'forces' in properties:
             self.results['forces'] = self.siriusInterface.getForces() * (units.Hartree / units.Bohr)
@@ -46,8 +48,8 @@ class SIRIUS(Calculator):
         if 'stress' in properties:
             stress_sirius = self.siriusInterface.getStress() * ( units.Hartree / units.Bohr**3)
             stress_sirius = 0.5 * (stress_sirius + stress_sirius.T)
-            self.results['stress'] = np.array([stress_sirius[0][0], stress_sirius[1][1], stress_sirius[2][2]
-                , stress_sirius[1][2], stress_sirius[0][2], stress_sirius[0][1]])
+            self.results['stress'] = np.array([stress_sirius[0][0] + self.pressure, stress_sirius[1][1] + self.pressure
+                , stress_sirius[2][2] + self.pressure, stress_sirius[1][2], stress_sirius[0][2], stress_sirius[0][1]])
 
         if 'bandgap' in properties:
             self.results['bandgap'] = self.siriusInterface.getBandGap() * units.Hartree
