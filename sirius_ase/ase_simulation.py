@@ -63,16 +63,41 @@ def aseSimulation(atoms: atoms.Atom, structufileName: str, outputFilename: str, 
 
 def entry():
 
-    siriusJsonFileName = sys.argv[1]
-    structufileName = sys.argv[2]
-    outputFilename = sys.argv[3]
-    if not os.path.exists(siriusJsonFileName):
+    parser = argparse.ArgumentParser(description ="""
+    Reads sirius paramater and an ase list of structures (extxyz format is recommended)
+    and sirius parameter json file and performs a DFT calculation of all structures.
+    """)
+
+    parser.add_argument('-s', '--sirius_parameters', dest ='sirius_parameters',
+        action ='store', help ='Filename of json file that contains sirius parameters.', required=True)
+    
+    parser.add_argument('-g', '--geometry', dest ='filename',
+        action ='store', help ='Filename of ASE compatible structure file.', required=True)
+    
+    parser.add_argument('-o', '--output', dest ='outfile',
+        action ='store', help ='Filename of output file. Default is output.extxyz', 
+        default="output.extxyz", required=False)
+    
+    parser.add_argument('-i', '--index', dest ='index',
+        action ='store', help ='Index of structures, will be passed directly to ase.io.read()', 
+        default=":", required=False)
+
+    args = parser.parse_args()
+
+    if not os.path.exists(args.sirius_parameters):
         print('json file does not exist')
         quit()
+    if not os.path.exists(args.filename):
+        print('Input filename.')
+        quit()
+    
 
-    atoms = ase.io.read(filename=structufileName, parallel=False, index = 0)
+    atoms = ase.io.read(filename=args.filename, parallel=False, index = args.index)
 
-    f = open(siriusJsonFileName)
+    if not isinstance(atoms, list):
+        atoms = [atoms]
+
+    f = open(args.sirius_parameters)
     jsonparams = json.load(f)
     f.close()
     try:
@@ -90,8 +115,15 @@ def entry():
         traceback.print_exc()
         quit()
 
-    atoms.calc = sirius_ase.siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
+    calc = sirius_ase.siriusCalculator.SIRIUS(atoms[0], pp_files, functionals, kpoints,
+                                              kshift, pw_cutoff, gk_cutoff, jsonparams)
+    
+    for at in atoms:
+        at.calc = calc
+        at.get_potential_energy()
+        at.get_forces()
+        at.get_stress
 
-    sirius_ase.ase_simulation.aseSimulation(atoms, structufileName, outputFilename)
+    ase.io.write(args.outfile, atoms, append=False, parallel=False)
 
-    atoms.calc.close()
+    calc.close()
