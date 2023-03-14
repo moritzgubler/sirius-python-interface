@@ -9,8 +9,9 @@ import sirius_ase.siriusCalculator
 import argparse
 
 
-def aseSimulation(atoms: atoms.Atom, structufileName: str, outputFilename: str, startIndex:int =0, endIndex:int=-1
-        , calc_energy = True, calc_forces = True, calc_stress = True):
+def aseSimulation(atoms: atoms.Atom, structufileName: str, outputFilename: str,
+                  startIndex:int =0, endIndex:int=-1,calc_energy = True, 
+                  calc_forces = True, calc_stress = True):
 
     atom_list = ase.io.read(filename=structufileName, parallel=False, index = ':')
 
@@ -81,6 +82,10 @@ def entry():
     parser.add_argument('-i', '--index', dest ='index',
         action ='store', help ='Index of structures, will be passed directly to ase.io.read()', 
         default=":", required=False)
+    
+    parser.add_argument('-p', '--pressure', dest ='pressure_gpa',
+        action ='store', help ='Pressure that will be added to the system',
+        type=float, default=0.0, required=False)
 
     args = parser.parse_args()
 
@@ -116,7 +121,8 @@ def entry():
         quit()
 
     calc = sirius_ase.siriusCalculator.SIRIUS(atoms[0], pp_files, functionals, kpoints,
-                                              kshift, pw_cutoff, gk_cutoff, jsonparams)
+                                              kshift, pw_cutoff, gk_cutoff, jsonparams,
+                                              pressure_giga_pascale=args.pressure_gpa)
     
     for at in atoms:
         at.calc = calc
