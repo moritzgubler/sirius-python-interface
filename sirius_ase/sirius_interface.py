@@ -3,7 +3,7 @@ import json
 import numpy as np
 from mpi4py import MPI
 import sirius_ase.k_grid
-import time
+import logging
 
 
 class siriusInterface:
@@ -86,7 +86,7 @@ class siriusInterface:
             self.context.unit_cell().add_atom_type(element, self.pp_files[element])
         for element in atomNames:
             if element not in self.pp_files:
-                print('Element has no corresponding pseudopotential file', element)
+                logging.error('Element has no corresponding pseudopotential file', element)
                 quit()
         
         for i in range(pos.shape[0]):
@@ -102,15 +102,14 @@ class siriusInterface:
                 self.k_point_set.add_kpoint(np.array(k), w)
             self.k_point_set.initialize()
             if self.mpiRank == 0:
-                print('Number of k points: ', self.k_point_set._num_kpoints())
-                print("Kpoint, weight:")
+                logging.info('Number of k points: ', self.k_point_set._num_kpoints())
+                logging.debug("Kpoint, weight:")
                 for k, w in kpointlist:
-                    print(k, w)
-                print('')
+                    logging.debug(k, w)
         else: # create kgrid using constructor from sirius. 
             self.k_point_set = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
             if self.mpiRank == 0:
-                print('Number of k points: ', self.k_point_set._num_kpoints())
+                logging.info('Number of k points: ', self.k_point_set._num_kpoints())
         self.dft = sirius.DFT_ground_state(self.k_point_set)
         self.dft.initial_state()
 
