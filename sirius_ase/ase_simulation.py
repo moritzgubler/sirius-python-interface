@@ -32,6 +32,10 @@ def entry():
     parser.add_argument('-p', '--pressure', dest ='pressure_gpa',
         action ='store', help ='Pressure that will be added to the system E->H=E+p*V, and pressure will be added to diagonal stress elements.',
         type=float, default=0.0, required=False)
+    
+    parser.add_argument('-n', '--no_recalculate', dest ='recalculateBasis',
+        action ='store_false', help ='If present, basis set will not be recalculated before every structure. Can be set if the lattice vectors do not change between calculations.',
+        default = True, required=False)
 
     args = parser.parse_args()
 
@@ -72,7 +76,7 @@ def entry():
     
     i = 0
     for at in atoms:
-        if i > 0:
+        if i > 0 and args.recalculateBasis:
             calc.recalculateBasis(at)
         results = {}
         at.calc = calc
