@@ -8,60 +8,6 @@ import json
 import sirius_ase.siriusCalculator
 import argparse
 
-
-def aseSimulation(atoms: atoms.Atom, structufileName: str, outputFilename: str,
-                  startIndex:int =0, endIndex:int=-1,calc_energy = True, 
-                  calc_forces = True, calc_stress = True):
-
-    atom_list = ase.io.read(filename=structufileName, parallel=False, index = ':')
-
-    n_atoms = len(atom_list)
-
-    calc = atoms.calc
-
-    if os.path.exists(outputFilename):
-        os.remove(outputFilename)
-
-    if endIndex < 0:
-        endIndex = endIndex + n_atoms + 1
-    if endIndex > n_atoms:
-        endIndex = n_atoms
-    if startIndex >= endIndex:
-        startIndex = endIndex
-
-    if structufileName == outputFilename:
-        print('input and outputfile are identical. aborting')
-        return
-
-    firstIteration = True
-
-    for i in range(startIndex, endIndex):
-        atom_list[i].calc = calc
-
-        # recalculate basis when a new structure is loaded for most precise results
-        if firstIteration:
-            firstIteration = False
-        else:
-            atom_list[i].calc.recalculateBasis(atom_list[i])
-
-        print('start calculating properties of structure ' + str(i))
-        sys.stdout.flush()
-        if calc_energy:
-            atom_list[i].get_potential_energy()
-            print('Potential energy: ', atom_list[i].get_potential_energy())
-        if calc_forces:
-            atom_list[i].get_forces()
-        if calc_stress:
-            atom_list[i].get_stress()
-
-        sys.stdout.flush()
-
-        ase.io.write(outputFilename, atom_list[i], append=True, parallel=False)
-        # write file also to standard out in order to monitor progress
-        # ase.io.write('-', atom_list[i], parallel=False)
-        sys.stdout.flush()
-
-
 def entry():
 
     parser = argparse.ArgumentParser(description ="""
@@ -84,7 +30,7 @@ def entry():
         default=":", required=False)
     
     parser.add_argument('-p', '--pressure', dest ='pressure_gpa',
-        action ='store', help ='Pressure that will be added to the system',
+        action ='store', help ='Pressure that will be added to the system E->H=E+p*V, and pressure will be added to diagonal stress elements.',
         type=float, default=0.0, required=False)
 
     args = parser.parse_args()
@@ -124,11 +70,24 @@ def entry():
                                               kshift, pw_cutoff, gk_cutoff, jsonparams,
                                               pressure_giga_pascale=args.pressure_gpa)
     
+    i = 0
     for at in atoms:
+        if i > 0:
+            calc.recalculateBasis(at)
+        results = {}
         at.calc = calc
-        at.get_potential_energy()
-        at.get_forces()
-        at.get_stress
+        results["positions"] = at.get_positions().tolist()
+        cell = at.get_cell()
+        results["cell_vector_a"] = cell[0,:].tolist()
+        results["cell_vector_b"] = cell[1,:].tolist()
+        results["cell_vector_c"] = cell[2,:].tolist()
+        results["energy"] = at.get_potential_energy()
+        results["forces"] = at.get_forces().tolist()
+        results["stress"] = at.get_stress(voigt=False).tolist()
+        print("Results of iteration " + str(i))
+        print(json.dumps(results, indent=4))
+        i += 1
+
 
     ase.io.write(args.outfile, atoms, append=False, parallel=False)
 
