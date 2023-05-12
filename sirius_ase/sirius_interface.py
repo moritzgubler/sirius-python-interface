@@ -83,7 +83,8 @@ class siriusInterface:
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
 
         for element in self.pp_files:
-            self.context.unit_cell().add_atom_type(element, self.pp_files[element])
+            if element in atomNames:
+                self.context.unit_cell().add_atom_type(element, self.pp_files[element])
         for element in atomNames:
             if element not in self.pp_files:
                 logging.error('Element has no corresponding pseudopotential file', element)
