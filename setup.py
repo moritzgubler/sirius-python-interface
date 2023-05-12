@@ -12,10 +12,12 @@ setup(
     install_requires=['mpi4py',
                       'numpy',
                       'ase',         
+                      'sqnm @ git+https://github.com/moritzgubler/vc-sqnm#egg=sqnm&subdirectory=src/python/',
                       ],
     entry_points={
       'console_scripts': [
-        'SiriusSinglePoint=sirius_ase.ase_simulation:entry'
+        'SiriusSinglePoint=sirius_ase.ase_simulation:entry',
+        'SiriusGeometryOpt=sirius_ase.ase_simulation:geopt'
       ]
     }
 )
