@@ -103,14 +103,12 @@ class siriusInterface:
                 self.k_point_set.add_kpoint(np.array(k), w)
             self.k_point_set.initialize()
             if self.mpiRank == 0:
-                logging.info('Number of k points: ', self.k_point_set._num_kpoints())
+                logging.info('Number of k points: %d'%len(kpointlist))
                 logging.debug("Kpoint, weight:")
                 for k, w in kpointlist:
                     logging.debug(k, w)
         else: # create kgrid using constructor from sirius. 
             self.k_point_set = sirius.K_point_set(self.context, self.kpoints, self.kshift, self.use_k_sym)
-            if self.mpiRank == 0:
-                logging.info('Number of k points: ', self.k_point_set._num_kpoints())
         self.dft = sirius.DFT_ground_state(self.k_point_set)
         self.dft.initial_state()
 
