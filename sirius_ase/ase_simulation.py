@@ -75,6 +75,9 @@ def entry():
                                               pressure_giga_pascale=args.pressure_gpa)
     
     i = 0
+    # If output file exists, delete it.
+    if os.path.isfile(args.outfile):
+        os.remove(args.outfile)
     for at in atoms:
         if i > 0 and args.recalculateBasis:
             calc.recalculateBasis(at)
@@ -90,9 +93,9 @@ def entry():
         results["stress"] = at.get_stress(voigt=False).tolist()
         print("Results of iteration " + str(i))
         print(json.dumps(results, indent=4))
+        with open(args.outfile, mode="a") as f:
+            ase.io.write(f, at)
+            f.flush()
         i += 1
-
-
-    ase.io.write(args.outfile, atoms, append=False, parallel=False)
 
     calc.close()
