@@ -43,7 +43,7 @@ class siriusInterface:
     useCustomeMeshGenerator = True
 
     def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
-            , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
+            , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD, returnWorkers: bool = False):
 
         self.pp_files = pp_files
         self.communicator = communicator
@@ -70,6 +70,9 @@ class siriusInterface:
             self.isMaster = True
         if self.mpiSize > 1 and self.mpiRank > 0:
             self.isWorker = True
+        if returnWorkers:
+            self.isMaster = False
+            self.isWorker = False
 
         self.setDefaultParameters()
         self.jsonString = json.dumps(self.paramDict)
