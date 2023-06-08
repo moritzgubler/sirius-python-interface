@@ -56,10 +56,7 @@ class siriusInterface:
         self.kpoints = kpoints
         self.kshift = kshift
 
-
         createChapters(self.paramDict)
-        # self.paramDict['parameters']['ngridk'] = kpoints
-        # self.paramDict['parameters']['kshift'] = kshift
         self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
         self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
         self.paramDict["parameters"]['xc_functionals'] = functionals
@@ -188,9 +185,21 @@ class siriusInterface:
             print("Converged charge density has negative values. Don't trust the result")
 
 
-    def resetSirius(self, atomNames: list, pos, lat):
+    def resetSirius(self, atomNames: list, pos, lat, kpoints: np.array = None, 
+                    kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
+        if kpoints is not None:
+            self.kpoints = kpoints
+        if kshift is not None:
+            self.kshift = kshift
+        if pw_cutoff is not None:
+            self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
+        if gk_cutoff is not None:
+            self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
+
         if self.isMaster:
-            self.communicator.bcast(('resetSirius', [atomNames, pos, lat]))
+            self.communicator.bcast(('resetSirius', [atomNames, pos, lat, self.kpoints, self.kshift,
+                                                     self.paramDict["parameters"][pw_cutoff]] ** 2,
+                                                     self.paramDict["parameters"]['gk_cutoff'] ** 2))
         del(self.context)
         del(self.k_point_set)
         del(self.dft)
