@@ -14,7 +14,7 @@ class SIRIUS(Calculator):
 
     def __init__(self, atom: atoms.Atom, pp_files, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float
-            , json_params :dict, pressure_giga_pascale = 0.0, communicator: MPI.Comm = MPI.COMM_WORLD):
+            , json_params :dict, pressure_giga_pascale: float = 0.0, communicator: MPI.Comm = MPI.COMM_WORLD):
 
         super().__init__()
         self.siriusInterface = sirius_interface.siriusInterface(atom.get_scaled_positions(wrap=False),
@@ -26,9 +26,9 @@ class SIRIUS(Calculator):
 
     def calculate(
         self,
-        atoms=None,
-        properties=None,
-        system_changes=all_changes,
+        atoms: atoms.Atoms = None,
+        properties = None,
+        system_changes = all_changes,
     ):
         if properties is None:
             properties = self.implemented_properties
@@ -65,8 +65,22 @@ class SIRIUS(Calculator):
         return self.get_property('fermienergy')
 
 
-    def recalculateBasis(self, atoms):
-        self.siriusInterface.resetSirius(atoms.get_chemical_symbols(), atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
+    def recalculateBasis(self, atoms: atoms.Atoms, kpoints: np.array = None, 
+                    kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
+        paramdict= {
+            'atomNames': atoms.get_chemical_symbols(),
+            'pos': atoms.get_scaled_positions(wrap = True),
+            'lat': atoms.get_cell(True) / units.Bohr
+        }
+        if kpoints is not None:
+            paramdict['kpoints'] = kpoints
+        if kshift is not None:
+            paramdict['kshift'] = kshift
+        if pw_cutoff is not None:
+            paramdict['pw_cutoff'] = pw_cutoff
+        if gk_cutoff is not None:
+            paramdict['gk_cutoff'] = gk_cutoff
+        self.siriusInterface.resetSirius(**paramdict)
 
     def close(self):
         self.siriusInterface.exit()
