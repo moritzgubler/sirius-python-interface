@@ -153,6 +153,8 @@ class siriusInterface:
                 self.getStress()
             elif str(messageTag) == 'bandgap':
                 self.getBandGap()
+            elif str(messageTag) == 'chargedensity':
+                self.getChargeDensity()
             elif str(messageTag) == 'fermienergy':
                 self.getFermiEnergy()
             elif str(messageTag) == 'resetSirius':
@@ -233,6 +235,13 @@ class siriusInterface:
         if self.isMaster:
             self.communicator.bcast(('fermienergy', 0))
         return self.k_point_set.energy_fermi()
+    
+    def getChargeDensity(self):
+        if self.isMaster:
+            self.communicator.bcast('chargedensity', 0)
+        rho = self.dft.density().f_rg(0)
+        dims = self.context.fft_grid().shape
+        return rho, dims
 
 
     def getForces(self):
