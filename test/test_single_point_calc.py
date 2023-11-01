@@ -66,6 +66,10 @@ atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshi
 print('etot', atoms.get_potential_energy())
 print('bandgap', atoms.calc.getBandGap())
 print('fermienergy', atoms.calc.getFermiEnergy())
+print('charge density')
+rho, indices = atoms.calc.getChargeDensity()
+print(rho)
+print(indices)
 atoms.calc.close()
 
 
