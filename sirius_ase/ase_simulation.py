@@ -9,6 +9,7 @@ import sirius_ase.siriusCalculator
 import argparse
 import sqnm.vcsqnm_for_ase
 import logging
+from pathlib import Path
 
 def entry():
 
@@ -178,7 +179,8 @@ def geopt():
         results = {}
         at.calc = calc
         optimizer = sqnm.vcsqnm_for_ase.aseOptimizer(at, True)
-        at = optimizer.optimize()
+        trajectory_filename = str(Path(args.outfile).with_suffix('').with_suffix('.trajectory.extxyz'))
+        at = optimizer.optimize(trajectory_filename = trajectory_filename)
         results["positions"] = at.get_positions().tolist()
         cell = at.get_cell()
         results["cell_vector_a"] = cell[0,:].tolist()
