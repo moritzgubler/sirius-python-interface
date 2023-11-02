@@ -258,6 +258,28 @@ class siriusInterface:
         self.findGroundState(pos, lat)
         return self.getEnergy(), self.getForces() , self.getStress() 
 
+    def getRealGrid(self, lattice):
+        rho, indices = self.getChargeDensity()
+        nx, ny, nz = indices
+        def convert_index(ix, iy, iz):
+            return (ix + nx * (iy + iz * ny))
+        def back_con(j):
+            iz = (j//nx)//ny
+            iy = j//nx - ny * iz
+            ix = j - nx * (iy + iz * ny)
+            return np.array([ix, iy, iz])
+
+        rgrid = np.zeros((nz * ny * nx, 3))
+        a = lattice[0, :] / nx
+        b = lattice[1, :] / ny
+        c = lattice[2, :] / nz
+        for iz in range(nz):
+            for iy in range(ny):
+                temp = iz * c + iy * b
+                for ix in range(nx):
+                    rgrid[convert_index(ix, iy, iz), :] = temp + ix * a
+        return rgrid, rho, indices
+
 
 def createChapters(json_params):
     chapters = ['mixer', 'settings', 'unit_cell', 'iterative_solver', 'control', 'parameters', 'nlcg', 'hubbard']
@@ -280,7 +302,7 @@ if __name__ == '__main__':
     pos = np.array([[0, 0, 0],
             [0.25, 0.25, 0.25]])
     atomNames = ['Si', 'Si']
-    pp_files = {'Si' : 'Si.json'}
+    pp_files = {'Si' : '../test/Si.json'}
 
     pw_cutoff = 400 # in a.u.^-1
     gk_cutoff = 80 # in a.u.^-1
@@ -289,15 +311,33 @@ if __name__ == '__main__':
     kpoints = np.array([3, 3, 3])
     kshift = np.array([0, 0, 0])
 
-    jsonparams = "{}"
+    jsonparams = {}
     s = siriusInterface(pos, lat, atomNames, pp_files, funtionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
     e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    print(e, np.linalg.norm(f), f.shape)
-    pos[0,:] = pos[0,:] + 0.1
-    e, f, stress = s.getEnergyForcesStress(pos, lat)
+    print(e, np.linalg.norm(f))
+    # pos[0,:] = pos[0,:] + 0.1
+    # e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    print(e, np.linalg.norm(f), f.shape)
+    # print(e, np.linalg.norm(f), f.shape)
+
+    grid, rho, indices = s.getRealGrid(lat)
+
+    def convert_index(ix, iy, iz):
+        return (ix + nx * (iy + iz * ny))
+    def back_con(j):
+        iz = (j//nx)//ny
+        iy = j//nx - ny * iz
+        ix = j - nx * (iy + iz * ny)
+        return np.array([ix, iy, iz])
+
+    nx, ny, nz = indices
+    print(indices)
+    # print(rho[:nx])
+    print(grid[nx:2*nx, :])
+    import matplotlib.pyplot as plt
+    plt.plot(rho[:nx])
+    plt.show()
 
     s.exit()
 
