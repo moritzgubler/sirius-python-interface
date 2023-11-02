@@ -41,7 +41,7 @@ jsonparams = {
         
     },
     "control" : {
-        "verbosity" : 1,
+        "verbosity" : 0,
         "processing_unit" : 'auto',
     },
     'parameters': {

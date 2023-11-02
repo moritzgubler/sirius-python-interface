@@ -5,6 +5,7 @@ from mpi4py import MPI
 import sirius_ase.sirius_interface as sirius_interface
 from ase import units
 import chargePartitioning.hirshfeldWeightFunction as hirshfeld
+import time
 
 class SIRIUS(Calculator):
     
@@ -65,16 +66,23 @@ class SIRIUS(Calculator):
             self.results['chargedensityandgrid'] = self.siriusInterface.getRealGrid(atoms.get_cell(True) / units.Bohr)
 
         if 'charges' in properties:
+            t1 = time.time()
             self.results['charges'] = []
             pos = atoms.get_positions() / units.Bohr
             lat = atoms.get_cell() / units.Bohr
             elements = atoms.get_chemical_symbols()
 
+            ts = time.time()
             grid, rho, indices = self.siriusInterface.getRealGrid(lat)
+            te = time.time()
+            print('grid time', te - ts)
 
 
             functionDict = hirshfeld.createDensityInterpolationDictionary(elements)
+            ts = time.time()
             normalizer = hirshfeld.getNormalizer(grid, pos, elements, functionDict, lat, 6.0)
+            te = time.time()
+            print('normalizer time', te - ts)
 
             nx, ny, nz = indices
             dv = np.abs(np.linalg.det(lat)) / (nx * ny * nz)
@@ -85,12 +93,17 @@ class SIRIUS(Calculator):
             # plt.show()
             # rho = np.ones(rho.shape)
 
+            t2 = time.time()
+
             for i in range(len(atoms)):
                 weights = hirshfeld.partitioningWeights(grid, pos[i, :], functionDict[elements[i]], normalizer, lat, 6.0)
                 # plt.plot(weights[:nx])
                 # plt.plot(normalizer[:nx])
                 # plt.show()
                 self.results['charges'].append(np.sum(rho * weights) * dv)
+            
+            t3 = time.time()
+            print('hf timings setup, hf integrals, ratio %f %f %f'%(t2 - t1, t3 - t2, (t3 - t2) / (t3 - t1)))
 
     def getBandGap(self):
         return self.get_property('bandgap')
