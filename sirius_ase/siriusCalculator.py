@@ -4,10 +4,11 @@ import numpy as np
 from mpi4py import MPI
 import sirius_ase.sirius_interface as sirius_interface
 from ase import units
+import chargePartitioning.hirshfeldWeightFunction as hirshfeld
 
 class SIRIUS(Calculator):
     
-    implemented_properties = ['energy', 'forces', 'stress', 'bandgap', 'fermienergy', 'chargedensity', 'chargedensityandgrid']
+    implemented_properties = ['energy', 'forces', 'stress', 'bandgap', 'fermienergy', 'chargedensity', 'chargedensityandgrid', 'charges']
     default_parameters = {}
     nolabel = True
     siriusInterface = None
@@ -63,6 +64,33 @@ class SIRIUS(Calculator):
         if 'chargedensityandgrid' in properties:
             self.results['chargedensityandgrid'] = self.siriusInterface.getRealGrid(atoms.get_cell(True) / units.Bohr)
 
+        if 'charges' in properties:
+            self.results['charges'] = []
+            pos = atoms.get_positions() / units.Bohr
+            lat = atoms.get_cell() / units.Bohr
+            elements = atoms.get_chemical_symbols()
+
+            grid, rho, indices = self.siriusInterface.getRealGrid(lat)
+
+
+            functionDict = hirshfeld.createDensityInterpolationDictionary(elements)
+            normalizer = hirshfeld.getNormalizer(grid, pos, elements, functionDict, lat, 6.0)
+
+            nx, ny, nz = indices
+            dv = np.abs(np.linalg.det(lat)) / (nx * ny * nz)
+            # import matplotlib.pyplot as plt
+
+            # plt.plot(normalizer[:nx])
+            # plt.plot(rho[:nx])
+            # plt.show()
+            # rho = np.ones(rho.shape)
+
+            for i in range(len(atoms)):
+                weights = hirshfeld.partitioningWeights(grid, pos[i, :], functionDict[elements[i]], normalizer, lat, 6.0)
+                # plt.plot(weights[:nx])
+                # plt.plot(normalizer[:nx])
+                # plt.show()
+                self.results['charges'].append(np.sum(rho * weights) * dv)
 
     def getBandGap(self):
         return self.get_property('bandgap')
