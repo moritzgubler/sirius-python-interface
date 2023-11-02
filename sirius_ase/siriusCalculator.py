@@ -7,7 +7,7 @@ from ase import units
 
 class SIRIUS(Calculator):
     
-    implemented_properties = ['energy', 'forces', 'stress', 'bandgap', 'fermienergy', 'chargedensity']
+    implemented_properties = ['energy', 'forces', 'stress', 'bandgap', 'fermienergy', 'chargedensity', 'chargedensityandgrid']
     default_parameters = {}
     nolabel = True
     siriusInterface = None
@@ -60,6 +60,9 @@ class SIRIUS(Calculator):
         if 'chargedensity' in properties:
             self.results['chargedensity'] = self.siriusInterface.getChargeDensity()
 
+        if 'chargedensityandgrid' in properties:
+            self.results['chargedensityandgrid'] = self.siriusInterface.getRealGrid(atoms.get_cell(True) / units.Bohr)
+
 
     def getBandGap(self):
         return self.get_property('bandgap')
@@ -69,6 +72,9 @@ class SIRIUS(Calculator):
     
     def getChargeDensity(self):
         return self.get_property('chargedensity')
+
+    def getChargeDensityAndGrid(self):
+        return self.get_property('chargedensityandgrid')
 
     def recalculateBasis(self, atoms: atoms.Atoms, kpoints: np.array = None, 
                     kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
