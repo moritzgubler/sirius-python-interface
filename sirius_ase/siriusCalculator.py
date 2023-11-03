@@ -4,7 +4,6 @@ import numpy as np
 from mpi4py import MPI
 import sirius_ase.sirius_interface as sirius_interface
 from ase import units
-import chargePartitioning.hirshfeldWeightFunction as hirshfeld
 import time
 
 class SIRIUS(Calculator):
@@ -66,6 +65,7 @@ class SIRIUS(Calculator):
             self.results['chargedensityandgrid'] = self.siriusInterface.getRealGrid(atoms.get_cell(True) / units.Bohr)
 
         if 'charges' in properties:
+            import chargePartitioning.hirshfeldWeightFunction as hirshfeld
             t1 = time.time()
             self.results['charges'] = []
             pos = atoms.get_positions() / units.Bohr
