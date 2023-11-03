@@ -4,17 +4,19 @@ import numpy as np
 from mpi4py import MPI
 import sirius_ase.sirius_interface as sirius_interface
 from ase import units
+import chargePartitioning.hirshfeldWeightFunction as hirshfeld
+import time
 
 class SIRIUS(Calculator):
     
-    implemented_properties = ['energy', 'forces', 'stress', 'bandgap', 'fermienergy']
+    implemented_properties = ['energy', 'forces', 'stress', 'bandgap', 'fermienergy', 'chargedensity', 'chargedensityandgrid', 'charges']
     default_parameters = {}
     nolabel = True
     siriusInterface = None
 
     def __init__(self, atom: atoms.Atom, pp_files, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float
-            , json_params :dict, pressure_giga_pascale = 0.0, communicator: MPI.Comm = MPI.COMM_WORLD):
+            , json_params :dict, pressure_giga_pascale: float = 0.0, communicator: MPI.Comm = MPI.COMM_WORLD):
 
         super().__init__()
         self.siriusInterface = sirius_interface.siriusInterface(atom.get_scaled_positions(wrap=False),
@@ -26,9 +28,9 @@ class SIRIUS(Calculator):
 
     def calculate(
         self,
-        atoms=None,
-        properties=None,
-        system_changes=all_changes,
+        atoms: atoms.Atoms = None,
+        properties = None,
+        system_changes = all_changes,
     ):
         if properties is None:
             properties = self.implemented_properties
@@ -57,16 +59,80 @@ class SIRIUS(Calculator):
         if 'fermienergy' in properties:
             self.results['fermienergy'] = self.siriusInterface.getFermiEnergy() * units.Hartree
 
+        if 'chargedensity' in properties:
+            self.results['chargedensity'] = self.siriusInterface.getChargeDensity()
+
+        if 'chargedensityandgrid' in properties:
+            self.results['chargedensityandgrid'] = self.siriusInterface.getRealGrid(atoms.get_cell(True) / units.Bohr)
+
+        if 'charges' in properties:
+            t1 = time.time()
+            self.results['charges'] = []
+            pos = atoms.get_positions() / units.Bohr
+            lat = atoms.get_cell() / units.Bohr
+            elements = atoms.get_chemical_symbols()
+
+            ts = time.time()
+            grid, rho, indices = self.siriusInterface.getRealGrid(lat)
+            te = time.time()
+            print('grid time', te - ts)
+
+
+            functionDict = hirshfeld.createDensityInterpolationDictionary(elements)
+            ts = time.time()
+            normalizer = hirshfeld.getNormalizer(grid, pos, elements, functionDict, lat, 6.0)
+            te = time.time()
+            print('normalizer time', te - ts)
+
+            nx, ny, nz = indices
+            dv = np.abs(np.linalg.det(lat)) / (nx * ny * nz)
+            # import matplotlib.pyplot as plt
+
+            # plt.plot(normalizer[:nx])
+            # plt.plot(rho[:nx])
+            # plt.show()
+            # rho = np.ones(rho.shape)
+
+            t2 = time.time()
+
+            for i in range(len(atoms)):
+                weights = hirshfeld.partitioningWeights(grid, pos[i, :], functionDict[elements[i]], normalizer, lat, 6.0)
+                # plt.plot(weights[:nx])
+                # plt.plot(normalizer[:nx])
+                # plt.show()
+                self.results['charges'].append(np.sum(rho * weights) * dv)
+            
+            t3 = time.time()
+            print('hf timings setup, hf integrals, ratio %f %f %f'%(t2 - t1, t3 - t2, (t3 - t2) / (t3 - t1)))
 
     def getBandGap(self):
         return self.get_property('bandgap')
 
     def getFermiEnergy(self):
         return self.get_property('fermienergy')
+    
+    def getChargeDensity(self):
+        return self.get_property('chargedensity')
 
+    def getChargeDensityAndGrid(self):
+        return self.get_property('chargedensityandgrid')
 
-    def recalculateBasis(self, atoms):
-        self.siriusInterface.resetSirius(atoms.get_chemical_symbols(), atoms.get_scaled_positions(wrap = False), atoms.get_cell(True) / units.Bohr)
+    def recalculateBasis(self, atoms: atoms.Atoms, kpoints: np.array = None, 
+                    kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
+        paramdict= {
+            'atomNames': atoms.get_chemical_symbols(),
+            'pos': atoms.get_scaled_positions(wrap = True),
+            'lat': atoms.get_cell(True) / units.Bohr
+        }
+        if kpoints is not None:
+            paramdict['kpoints'] = kpoints
+        if kshift is not None:
+            paramdict['kshift'] = kshift
+        if pw_cutoff is not None:
+            paramdict['pw_cutoff'] = pw_cutoff
+        if gk_cutoff is not None:
+            paramdict['gk_cutoff'] = gk_cutoff
+        self.siriusInterface.resetSirius(**paramdict)
 
     def close(self):
         self.siriusInterface.exit()

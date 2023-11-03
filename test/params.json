@@ -1,0 +1,25 @@
+{
+    "mixer": {
+        "beta": 0.5,
+        "max_history": 8,
+        "use_hartree": true
+    },
+    "control" : {
+        "verbosity" : 0
+    },
+    "parameters": {
+        "use_symmetry": true,
+        "energy_tol" : 1e-7, 
+        "density_tol" : 1e-8,
+        "pw_cutoff" : 400,
+        "gk_cutoff" : 100,
+        "xc_functionals" : ["XC_GGA_X_PBE", "XC_GGA_C_PBE"],
+        "ngridk" : [2, 2, 2],
+        "shiftk" : [1, 1, 1]
+    },
+    "unit_cell": {
+        "atom_files":{
+            "Si": "Si.json"
+        }
+    }
+}

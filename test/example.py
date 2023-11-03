@@ -1,20 +1,17 @@
 import sirius
 import json
 import numpy
-import time
 
 def make_new_ctx(pw_cutoff, gk_cutoff):
-# lattice vectors
     a0 = 5.31148326730872
     lat = numpy.array(
         [[0.0, a0, a0],
          [a0, 0.0, a0],
          [a0, a0, 0.0]
     ])
-# basic input parameters
     inp={
         "parameters" : {
-            "xc_functionals" : ["XC_LDA_X", "XC_LDA_C_PZ"],
+            "xc_functionals" : ["XC_GGA_X_PBE", "XC_GGA_C_PBE"],
             "electronic_structure_method" : "pseudopotential",
             "pw_cutoff" : pw_cutoff,
             "gk_cutoff" : gk_cutoff
@@ -23,16 +20,11 @@ def make_new_ctx(pw_cutoff, gk_cutoff):
             "verbosity" : 0
         }
     }
-# create simulation context
     ctx = sirius.Simulation_context(json.dumps(inp))
-# set lattice vectors
     ctx.unit_cell().set_lattice_vectors(*lat)
-# add atom type
     ctx.unit_cell().add_atom_type('Si','Si.json')
-# add atoms
     ctx.unit_cell().add_atom('Si', [0.0,0.0,0.0])
     ctx.unit_cell().add_atom('Si', [0.25,0.25,0.25])
-# intialize and return simulation context
     ctx.initialize()
     return ctx
 
@@ -44,28 +36,31 @@ def main():
     kgrid = sirius.K_point_set(ctx, [k,k,k], [0,0,0], True)
     dft = sirius.DFT_ground_state(kgrid)
     dft.initial_state()
-    result = dft.find(1e-6, 1e-6, 1e-2, 100, False)
-    # print(json.dumps(result, indent=2))
+    dft.find(1e-6, 1e-6, 1e-2, 100, False)
+
+    # now I can get the charge density in fourier space
+    density = dft.density()
 
 
-    # Extracting stress is working: 
-    stressSirius = dft.stress()
-    print('type of siriusForces', type(stressSirius))
-    stress = stressSirius.calc_stress_total()
-    print('stress', stress)
+    print('reciprocal space density: density.rho')   
+    print(density.rho)
 
-    # Now I try to extract forces
-    siriusForces = dft.forces()
-    print('type of siriusForces', type(siriusForces))
+    print('density.f_rg(0). I think this is the real space density.')
+    print(density.f_rg(0))
 
-    # Now I try to get the forces from ther sirius.Force object:
-    # none of those work, all return a sddk::mdarray<double, 2> object which does not seem to be python compatible
-    # forces = siriusForces.total
-    # forces = siriusForces.total()
-    forces = numpy.array(siriusForces.calc_forces_total())
-    print(forces)
+    import matplotlib.pyplot as plt
 
-    print('ef', kgrid.energy_fermi(), 'bandgap', kgrid.band_gap())
+    plt.title('density.f_rg')
+    plt.plot(density.f_rg(0))
+    plt.show()
+
+    # transform density to real space:
+    density.fft_transform(1)
+    fft_grid = ctx.fft_grid()
+    print(fft_grid)
+    print(fft_grid.shape)
+
+
 
 if __name__ == "__main__":
     main()

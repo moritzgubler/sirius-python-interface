@@ -43,7 +43,7 @@ class siriusInterface:
     useCustomeMeshGenerator = True
 
     def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
-            , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD):
+            , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD, returnWorkers: bool = False):
 
         self.pp_files = pp_files
         self.communicator = communicator
@@ -56,10 +56,7 @@ class siriusInterface:
         self.kpoints = kpoints
         self.kshift = kshift
 
-
         createChapters(self.paramDict)
-        # self.paramDict['parameters']['ngridk'] = kpoints
-        # self.paramDict['parameters']['kshift'] = kshift
         self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
         self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
         self.paramDict["parameters"]['xc_functionals'] = functionals
@@ -70,6 +67,9 @@ class siriusInterface:
             self.isMaster = True
         if self.mpiSize > 1 and self.mpiRank > 0:
             self.isWorker = True
+        if returnWorkers:
+            self.isMaster = False
+            self.isWorker = False
 
         self.setDefaultParameters()
         self.jsonString = json.dumps(self.paramDict)
@@ -153,6 +153,8 @@ class siriusInterface:
                 self.getStress()
             elif str(messageTag) == 'bandgap':
                 self.getBandGap()
+            elif str(messageTag) == 'chargedensity':
+                self.getChargeDensity()
             elif str(messageTag) == 'fermienergy':
                 self.getFermiEnergy()
             elif str(messageTag) == 'resetSirius':
@@ -185,9 +187,21 @@ class siriusInterface:
             print("Converged charge density has negative values. Don't trust the result")
 
 
-    def resetSirius(self, atomNames: list, pos, lat):
+    def resetSirius(self, atomNames: list, pos, lat, kpoints: np.array = None, 
+                    kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
+        if kpoints is not None:
+            self.kpoints = kpoints
+        if kshift is not None:
+            self.kshift = kshift
+        if pw_cutoff is not None:
+            self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
+        if gk_cutoff is not None:
+            self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
+
         if self.isMaster:
-            self.communicator.bcast(('resetSirius', [atomNames, pos, lat]))
+            self.communicator.bcast(('resetSirius', [atomNames, pos, lat, self.kpoints, self.kshift,
+                                                     self.paramDict["parameters"][pw_cutoff]] ** 2,
+                                                     self.paramDict["parameters"]['gk_cutoff'] ** 2))
         del(self.context)
         del(self.k_point_set)
         del(self.dft)
@@ -221,6 +235,13 @@ class siriusInterface:
         if self.isMaster:
             self.communicator.bcast(('fermienergy', 0))
         return self.k_point_set.energy_fermi()
+    
+    def getChargeDensity(self):
+        if self.isMaster:
+            self.communicator.bcast('chargedensity', 0)
+        rho = self.dft.density().f_rg(0)
+        dims = self.context.fft_grid().shape
+        return rho, dims
 
 
     def getForces(self):
@@ -236,6 +257,28 @@ class siriusInterface:
     def getEnergyForcesStress(self, pos, lat):
         self.findGroundState(pos, lat)
         return self.getEnergy(), self.getForces() , self.getStress() 
+
+    def getRealGrid(self, lattice):
+        rho, indices = self.getChargeDensity()
+        nx, ny, nz = indices
+        def convert_index(ix, iy, iz):
+            return (ix + nx * (iy + iz * ny))
+        def back_con(j):
+            iz = (j//nx)//ny
+            iy = j//nx - ny * iz
+            ix = j - nx * (iy + iz * ny)
+            return np.array([ix, iy, iz])
+
+        rgrid = np.zeros((nz * ny * nx, 3))
+        a = lattice[0, :] / nx
+        b = lattice[1, :] / ny
+        c = lattice[2, :] / nz
+        for iz in range(nz):
+            for iy in range(ny):
+                temp = iz * c + iy * b
+                for ix in range(nx):
+                    rgrid[convert_index(ix, iy, iz), :] = temp + ix * a
+        return rgrid, rho, indices
 
 
 def createChapters(json_params):
@@ -259,7 +302,7 @@ if __name__ == '__main__':
     pos = np.array([[0, 0, 0],
             [0.25, 0.25, 0.25]])
     atomNames = ['Si', 'Si']
-    pp_files = {'Si' : 'Si.json'}
+    pp_files = {'Si' : '../test/Si.json'}
 
     pw_cutoff = 400 # in a.u.^-1
     gk_cutoff = 80 # in a.u.^-1
@@ -268,15 +311,33 @@ if __name__ == '__main__':
     kpoints = np.array([3, 3, 3])
     kshift = np.array([0, 0, 0])
 
-    jsonparams = "{}"
+    jsonparams = {}
     s = siriusInterface(pos, lat, atomNames, pp_files, funtionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
     e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    print(e, np.linalg.norm(f), f.shape)
-    pos[0,:] = pos[0,:] + 0.1
-    e, f, stress = s.getEnergyForcesStress(pos, lat)
+    print(e, np.linalg.norm(f))
+    # pos[0,:] = pos[0,:] + 0.1
+    # e, f, stress = s.getEnergyForcesStress(pos, lat)
 
-    print(e, np.linalg.norm(f), f.shape)
+    # print(e, np.linalg.norm(f), f.shape)
+
+    grid, rho, indices = s.getRealGrid(lat)
+
+    def convert_index(ix, iy, iz):
+        return (ix + nx * (iy + iz * ny))
+    def back_con(j):
+        iz = (j//nx)//ny
+        iy = j//nx - ny * iz
+        ix = j - nx * (iy + iz * ny)
+        return np.array([ix, iy, iz])
+
+    nx, ny, nz = indices
+    print(indices)
+    # print(rho[:nx])
+    print(grid[nx:2*nx, :])
+    import matplotlib.pyplot as plt
+    plt.plot(rho[:nx])
+    plt.show()
 
     s.exit()
 

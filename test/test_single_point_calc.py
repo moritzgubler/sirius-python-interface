@@ -7,6 +7,7 @@ from ase import units
 import sirius_ase.siriusCalculator as siriusCalculator
 import numpy as np
 from ase.io import read
+import time
 
 
 import sqnm.vcsqnm_for_ase
@@ -40,7 +41,7 @@ jsonparams = {
         
     },
     "control" : {
-        "verbosity" : 1,
+        "verbosity" : 0,
         "processing_unit" : 'auto',
     },
     'parameters': {
@@ -51,6 +52,7 @@ jsonparams = {
     }
 }
 
+t1 = time.time()
 
 
 atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
@@ -66,6 +68,17 @@ atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshi
 print('etot', atoms.get_potential_energy())
 print('bandgap', atoms.calc.getBandGap())
 print('fermienergy', atoms.calc.getFermiEnergy())
+t2 = time.time()
+print('charge density')
+rho, indices = atoms.calc.getChargeDensity()
+print(rho)
+print(indices)
+print('hirshfeld charges')
+print(atoms.get_charges())
+t3 = time.time()
+print(np.sum(atoms.get_charges()))
+
+print("Timings: DFT, %f hirshfeld, %f, ratio: %f"%(t2 - t1, t3 - t2, (t3 - t2) /  (t3 - t1)))
 atoms.calc.close()
 
 
