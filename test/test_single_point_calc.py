@@ -30,7 +30,7 @@ pw_cutoff = 400 # in a.u.^-1
 gk_cutoff = 100 # in a.u.^-1
 functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
 kpoints = np.array([2, 2, 2])
-kshift = np.array([0, 0, 0])
+kshift = np.array([1, 1, 1])
 
 
 jsonparams = {

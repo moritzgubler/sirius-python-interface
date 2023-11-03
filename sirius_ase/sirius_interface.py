@@ -269,15 +269,21 @@ class siriusInterface:
             ix = j - nx * (iy + iz * ny)
             return np.array([ix, iy, iz])
 
-        rgrid = np.zeros((nz * ny * nx, 3))
+        rgrid = np.zeros((nz, ny, nx, 3))
         a = lattice[0, :] / nx
         b = lattice[1, :] / ny
         c = lattice[2, :] / nz
         for iz in range(nz):
             for iy in range(ny):
                 temp = iz * c + iy * b
-                for ix in range(nx):
-                    rgrid[convert_index(ix, iy, iz), :] = temp + ix * a
+                rgrid[iz, iy, :, 0] = temp[0] + np.linspace(0, lattice[0, 0], nx, endpoint=False)
+                rgrid[iz, iy, :, 1] = temp[1] + np.linspace(0, lattice[0, 1], nx, endpoint=False)
+                rgrid[iz, iy, :, 2] = temp[2] + np.linspace(0, lattice[0, 2], nx, endpoint=False)
+                # for ix in range(nx):
+                #     rgrid[iz, iy, ix, :] = temp + ix * a
+
+        # test this reshaping
+        rho = np.reshape(rho, (nz, ny, nx))
         return rgrid, rho, indices
 
 
