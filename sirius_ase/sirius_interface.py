@@ -240,7 +240,7 @@ class siriusInterface:
     def getForces(self):
         if self.isMaster:
             self.communicator.bcast(('forces', 0))
-        return np.array(self.dft.forces().calc_forces_total()).T
+        return np.array(self.dft.forces().calc_forces_total(True)).T
 
     def getStress(self):
         if self.isMaster:
