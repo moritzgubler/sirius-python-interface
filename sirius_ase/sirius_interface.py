@@ -36,6 +36,7 @@ class siriusInterface:
     initialLattice = None
     kpoints = np.ones(3)
     kshift = np.zeros(3)
+    scfCorrection = True
 
     first_eval = True
     sirius_communicator = None
@@ -60,6 +61,8 @@ class siriusInterface:
         self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
         self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
         self.paramDict["parameters"]['xc_functionals'] = functionals
+        if self.paramDict["parameters"].contains('scf_correction'):
+            self.scfCorrection = self.paramDict["parameters"]['scf_correction']
 
         self.mpiSize = communicator.Get_size()
         self.mpiRank = communicator.Get_rank()
@@ -222,9 +225,11 @@ class siriusInterface:
             self.communicator.bcast(('energy', 0))
             print(self.dftRresult)
             sys.stdout.flush()
-        return self.dftRresult['energy']['total'] + self.dftRresult['energy']['scf_correction']
+        energy = self.dftRresult['energy']['total']
+        if self.scfCorrection:
+            energy += self.dftRresult['energy']['scf_correction']
+        return energy
 
-    
     def getBandGap(self):
         if self.isMaster:
             self.communicator.bcast(('bandgap', 0))
@@ -240,7 +245,7 @@ class siriusInterface:
     def getForces(self):
         if self.isMaster:
             self.communicator.bcast(('forces', 0))
-        return np.array(self.dft.forces().calc_forces_total(True)).T
+        return np.array(self.dft.forces().calc_forces_total(self.scfCorrection)).T
 
     def getStress(self):
         if self.isMaster:
