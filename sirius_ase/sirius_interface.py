@@ -61,8 +61,8 @@ class siriusInterface:
         self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
         self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
         self.paramDict["parameters"]['xc_functionals'] = functionals
-        if "scf_correction" in self.paramDict["parameters"].keys():
-            self.scfCorrection = self.paramDict["parameters"]['scf_correction']
+        if "use_scf_correction" in self.paramDict["parameters"].keys():
+            self.scfCorrection = self.paramDict["parameters"]['use_scf_correction']
 
         self.mpiSize = communicator.Get_size()
         self.mpiRank = communicator.Get_rank()
