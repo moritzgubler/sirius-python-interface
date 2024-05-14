@@ -4,7 +4,7 @@ import numpy as np
 from mpi4py import MPI
 import sirius_ase.k_grid
 import logging
-
+import sys
 
 class siriusInterface:
 
@@ -220,6 +220,8 @@ class siriusInterface:
     def getEnergy(self):
         if self.isMaster:
             self.communicator.bcast(('energy', 0))
+            print(self.dftRresult)
+            sys.stdout.flush()
         return self.dftRresult['energy']['total'] + self.dftRresult['energy']['scf_correction']
 
     
