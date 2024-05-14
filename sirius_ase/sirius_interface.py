@@ -223,8 +223,7 @@ class siriusInterface:
     def getEnergy(self):
         if self.isMaster:
             self.communicator.bcast(('energy', 0))
-            print(self.dftRresult)
-            sys.stdout.flush()
+            print(self.scfCorrection)
         energy = self.dftRresult['energy']['total']
         if self.scfCorrection:
             energy += self.dftRresult['energy']['scf_correction']
