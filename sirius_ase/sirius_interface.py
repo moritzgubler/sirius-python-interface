@@ -198,8 +198,8 @@ class siriusInterface:
 
         if self.isMaster:
             self.communicator.bcast(('resetSirius', [atomNames, pos, lat, self.kpoints, self.kshift,
-                                                     self.paramDict["parameters"][pw_cutoff]] ** 2,
-                                                     self.paramDict["parameters"]['gk_cutoff'] ** 2))
+                                                     self.paramDict["parameters"]['pw_cutoff'] ** 2,
+                                                     self.paramDict["parameters"]['gk_cutoff'] ** 2]))
         del(self.context)
         del(self.k_point_set)
         del(self.dft)
