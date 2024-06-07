@@ -80,6 +80,9 @@ class SIRIUS(Calculator):
             paramdict['pw_cutoff'] = pw_cutoff
         if gk_cutoff is not None:
             paramdict['gk_cutoff'] = gk_cutoff
+        print("Calculator: recalculate basis called.")
+        print("parameter dictionary to be passed: ")
+        print(paramdict)
         self.siriusInterface.resetSirius(**paramdict)
 
     def close(self):

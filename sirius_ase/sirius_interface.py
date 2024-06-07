@@ -4,6 +4,7 @@ import numpy as np
 from mpi4py import MPI
 import sirius_ase.k_grid
 import logging
+import time
 
 
 class siriusInterface:
@@ -189,17 +190,40 @@ class siriusInterface:
                     kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
         if kpoints is not None:
             self.kpoints = kpoints
+        elif not self.isMaster:
+            print("kpoints argument cannot be empty if not master process.")
         if kshift is not None:
             self.kshift = kshift
+        elif not self.isMaster:
+            print("kshift argument cannot be empty if not master process.")
         if pw_cutoff is not None:
             self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
+        elif not self.isMaster:
+            print("pw_cutoff argument cannot be empty if not master process.")
         if gk_cutoff is not None:
             self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
+        elif not self.isMaster:
+            print("gk_cutoff argument cannot be empty if not master process.")
 
         if self.isMaster:
             self.communicator.bcast(('resetSirius', [atomNames, pos, lat, self.kpoints, self.kshift,
                                                      self.paramDict["parameters"]['pw_cutoff'] ** 2,
                                                      self.paramDict["parameters"]['gk_cutoff'] ** 2]))
+            print("Master sent resetSirius")
+            print("current paramter dict (master) (pw and gk cutoff are square root of input value): ")
+            print(self.paramDict)
+            print("pos", pos)
+            print("lat", lat)
+            print('atomNames', atomNames)
+        else:
+            time.sleep(1)
+            print("Worker received resetSirius")
+            print("current paramter dict (worker) (pw and gk cutoff are square root of input value): ")
+            print(self.paramDict)
+            print("pos", pos)
+            print("lat", lat)
+            print('atomNames', atomNames)
+
         del(self.context)
         del(self.k_point_set)
         del(self.dft)
