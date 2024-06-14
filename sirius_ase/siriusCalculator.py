@@ -69,7 +69,7 @@ class SIRIUS(Calculator):
                     kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
         paramdict= {
             'atomNames': atoms.get_chemical_symbols(),
-            'pos': atoms.get_scaled_positions(wrap = True),
+            'pos': atoms.get_scaled_positions(wrap = False),
             'lat': atoms.get_cell(True) / units.Bohr
         }
         if kpoints is not None:
@@ -81,6 +81,7 @@ class SIRIUS(Calculator):
         if gk_cutoff is not None:
             paramdict['gk_cutoff'] = gk_cutoff
         self.siriusInterface.resetSirius(**paramdict)
+        self.reset()
 
     def close(self):
         self.siriusInterface.exit()
