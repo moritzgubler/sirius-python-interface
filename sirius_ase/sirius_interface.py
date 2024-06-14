@@ -36,7 +36,7 @@ class siriusInterface:
     initialLattice = None
     kpoints = np.ones(3)
     kshift = np.zeros(3)
-    scfCorrection = True
+    scfCorrection = False
 
     first_eval = True
     sirius_communicator = None
@@ -75,13 +75,13 @@ class siriusInterface:
             self.isWorker = False
 
         self.setDefaultParameters()
-        self.jsonString = json.dumps(self.paramDict)
 
         self.createSiriusObjects(atomNames, pos, lat)
         if self.isWorker:
             self.worker_loop()
 
     def createSiriusObjects(self, atomNames: list, pos, lat):
+        self.jsonString = json.dumps(self.paramDict)
         self.context = sirius.Simulation_context(self.jsonString, self.sirius_communicator)
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
 
@@ -175,7 +175,9 @@ class siriusInterface:
             self.communicator.bcast(('findGroundState', [pos, lat]))
 
         tester = np.linalg.norm(self.initialLattice - lat, axis=1) < 0.01 * np.linalg.norm(self.initialLattice, axis=1)
+        # print('finding ground state', tester)
 
+        # if self.first_eval and np.max(np.abs(self.initialPositions - pos)) < 1.e-10 and np.max(np.abs(self.initialLattice - lat)) < 1.e-10:
         if self.first_eval:
             self.first_eval = False
         else:
@@ -207,8 +209,9 @@ class siriusInterface:
         del(self.k_point_set)
         del(self.dft)
         self.atomNames = atomNames
-        self.initialPositions = pos
-        self.initialLattice = lat
+        self.initialPositions = pos.copy()
+        self.initialLattice = lat.copy()
+        # print("parameter dictionary", self.paramDict)
         self.createSiriusObjects(atomNames, pos, lat)
         self.first_eval = True
 
@@ -233,12 +236,10 @@ class siriusInterface:
             self.communicator.bcast(('bandgap', 0))
         return self.k_point_set.band_gap()
 
-
     def getFermiEnergy(self):
         if self.isMaster:
             self.communicator.bcast(('fermienergy', 0))
         return self.k_point_set.energy_fermi()
-
 
     def getForces(self):
         if self.isMaster:
