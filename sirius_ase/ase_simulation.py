@@ -178,7 +178,7 @@ def geopt():
         results = {}
         at.calc = calc
         optimizer = sqnm.vcsqnm_for_ase.aseOptimizer(at, True)
-        at = optimizer.optimize()
+        at = optimizer.optimize(args.outfile)
         results["positions"] = at.get_positions().tolist()
         cell = at.get_cell()
         results["cell_vector_a"] = cell[0,:].tolist()
@@ -189,9 +189,9 @@ def geopt():
         results["stress"] = at.get_stress(voigt=False).tolist()
         print("Results of iteration " + str(i))
         print(json.dumps(results, indent=4))
-        with open(args.outfile, mode="a") as f:
-            ase.io.write(f, at)
-            f.flush()
+        # with open(args.outfile, mode="a") as f:
+        #     ase.io.write(f, at)
+        #     f.flush()
         i += 1
 
     calc.close()
