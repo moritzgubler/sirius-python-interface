@@ -81,6 +81,7 @@ class SIRIUS(Calculator):
         if gk_cutoff is not None:
             paramdict['gk_cutoff'] = gk_cutoff
         self.siriusInterface.resetSirius(**paramdict)
+        self.reset()
 
     def close(self):
         self.siriusInterface.exit()
