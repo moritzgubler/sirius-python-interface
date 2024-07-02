@@ -9,6 +9,7 @@ import sirius_ase.siriusCalculator
 import argparse
 import sqnm.vcsqnm_for_ase
 import logging
+import time
 
 def entry():
 
@@ -72,17 +73,23 @@ def entry():
         traceback.print_exc()
         quit()
 
+    t1 = time.time()
     calc = sirius_ase.siriusCalculator.SIRIUS(atoms[0], pp_files, functionals, kpoints,
                                               kshift, pw_cutoff, gk_cutoff, jsonparams,
                                               pressure_giga_pascale=args.pressure_gpa)
-    
+    t2 = time.time()
+    t_setup = t2 - t1
+
     i = 0
     # If output file exists, delete it.
     if os.path.isfile(args.outfile):
         os.remove(args.outfile)
     for at in atoms:
         if i > 0 and args.recalculateBasis:
+            t1 = time.time()
             calc.recalculateBasis(at)
+            t2 = time.time()
+            t_setup = t2 - t1
         results = {}
         at.calc = calc
         results["positions"] = at.get_positions().tolist()
@@ -90,10 +97,15 @@ def entry():
         results["cell_vector_a"] = cell[0,:].tolist()
         results["cell_vector_b"] = cell[1,:].tolist()
         results["cell_vector_c"] = cell[2,:].tolist()
+        t1 = time.time()
         results["energy"] = at.get_potential_energy()
         results["forces"] = at.get_forces().tolist()
         results["stress"] = at.get_stress(voigt=False).tolist()
+        t2 = time.time()
+        t_calc = t2 - t1
+        results["time"] = {"setup": t_setup, "calculation": t_calc}
         print("Results of iteration " + str(i))
+        print("Timings, setup: " + str(t_setup) + "s, calculation: " + str(t_calc) + "s")
         print(json.dumps(results, indent=4))
         with open(args.outfile, mode="a") as f:
             ase.io.write(f, at)
