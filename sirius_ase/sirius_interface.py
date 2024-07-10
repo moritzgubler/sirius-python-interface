@@ -76,6 +76,22 @@ class siriusInterface:
 
         self.setDefaultParameters()
 
+        import copy
+        jsparams = copy.deepcopy(self.paramDict)
+        jsparams['unit_cell'] = dict()
+        jsparams['unit_cell']['lattice_vectors'] = lat.tolist()
+        jsparams['unit_cell']['lattice_vectors_scale'] = 1.0
+        jsparams['unit_cell']['atom_types'] = list(self.pp_files.keys())
+        jsparams['unit_cell']['atom_files'] = self.pp_files
+        atoms = dict()
+        for at in list(self.pp_files.keys()):
+            atoms[at] = list()
+        for i, at in enumerate(self.atomNames):
+            atoms[at].append(list(pos[i, :]))
+        jsparams['unit_cell']['atoms'] = atoms
+        with open('sirius.json', 'w') as f:
+            json.dump(jsparams, f, indent=4)
+
         self.createSiriusObjects(atomNames, pos, lat)
         if self.isWorker:
             self.worker_loop()
@@ -182,7 +198,6 @@ class siriusInterface:
             self.first_eval = False
         else:
             self.updateSirius(pos, lat)
-
         self.dftRresult = self.dft.find(self.density_tol, self.energy_tol, self.initial_tol, self.num_dft_iter, self.write_dft_ground_state)
         if not self.dftRresult['converged']:
             print("dft calculation did not converge. Don't trust the results and increase num_dft_iter!")

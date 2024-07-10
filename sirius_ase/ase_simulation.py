@@ -1,3 +1,5 @@
+import time
+t_import_start = time.time()
 from ase import atoms
 import ase.io
 import os
@@ -9,9 +11,11 @@ import sirius_ase.siriusCalculator
 import argparse
 import sqnm.vcsqnm_for_ase
 import logging
-import time
+t_import_end = time.time()
+print("Import time: ", t_import_end - t_import_start)
 
 def entry():
+    t_start = time.time()
 
     parser = argparse.ArgumentParser(description ="""
     Reads sirius paramater and an ase list of structures (extxyz format is recommended)
@@ -73,6 +77,8 @@ def entry():
         traceback.print_exc()
         quit()
 
+    t_end = time.time()
+    print("Parsing time: ", t_end - t_start)
     t1 = time.time()
     calc = sirius_ase.siriusCalculator.SIRIUS(atoms[0], pp_files, functionals, kpoints,
                                               kshift, pw_cutoff, gk_cutoff, jsonparams,
@@ -111,8 +117,10 @@ def entry():
             ase.io.write(f, at)
             f.flush()
         i += 1
-
+    t1 = time.time()
     calc.close()
+    t2 = time.time()
+    print("Closing time: ", t2 - t1)
 
 def geopt():
 
