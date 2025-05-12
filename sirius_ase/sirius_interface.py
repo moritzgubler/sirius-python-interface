@@ -4,7 +4,7 @@ import numpy as np
 from mpi4py import MPI
 import sirius_ase.k_grid
 import logging
-
+import sys
 
 class siriusInterface:
 
@@ -36,6 +36,7 @@ class siriusInterface:
     initialLattice = None
     kpoints = np.ones(3)
     kshift = np.zeros(3)
+    scfCorrection = False
 
     first_eval = True
     sirius_communicator = None
@@ -60,6 +61,8 @@ class siriusInterface:
         self.paramDict["parameters"]['pw_cutoff'] = np.sqrt(pw_cutoff)
         self.paramDict["parameters"]['gk_cutoff'] = np.sqrt(gk_cutoff)
         self.paramDict["parameters"]['xc_functionals'] = functionals
+        if "use_scf_correction" in self.paramDict["parameters"].keys():
+            self.scfCorrection = self.paramDict["parameters"]['use_scf_correction']
 
         self.mpiSize = communicator.Get_size()
         self.mpiRank = communicator.Get_rank()
@@ -72,13 +75,13 @@ class siriusInterface:
             self.isWorker = False
 
         self.setDefaultParameters()
-        self.jsonString = json.dumps(self.paramDict)
 
         self.createSiriusObjects(atomNames, pos, lat)
         if self.isWorker:
             self.worker_loop()
 
     def createSiriusObjects(self, atomNames: list, pos, lat):
+        self.jsonString = json.dumps(self.paramDict)
         self.context = sirius.Simulation_context(self.jsonString, self.sirius_communicator)
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
 
@@ -172,7 +175,9 @@ class siriusInterface:
             self.communicator.bcast(('findGroundState', [pos, lat]))
 
         tester = np.linalg.norm(self.initialLattice - lat, axis=1) < 0.01 * np.linalg.norm(self.initialLattice, axis=1)
+        # print('finding ground state', tester)
 
+        # if self.first_eval and np.max(np.abs(self.initialPositions - pos)) < 1.e-10 and np.max(np.abs(self.initialLattice - lat)) < 1.e-10:
         if self.first_eval:
             self.first_eval = False
         else:
@@ -204,8 +209,9 @@ class siriusInterface:
         del(self.k_point_set)
         del(self.dft)
         self.atomNames = atomNames
-        self.initialPositions = pos
-        self.initialLattice = lat
+        self.initialPositions = pos.copy()
+        self.initialLattice = lat.copy()
+        # print("parameter dictionary", self.paramDict)
         self.createSiriusObjects(atomNames, pos, lat)
         self.first_eval = True
 
@@ -220,25 +226,25 @@ class siriusInterface:
     def getEnergy(self):
         if self.isMaster:
             self.communicator.bcast(('energy', 0))
-        return self.dftRresult['energy']['total'] + self.dftRresult['energy']['scf_correction']
+        energy = self.dftRresult['energy']['total']
+        if self.scfCorrection:
+            energy += self.dftRresult['energy']['scf_correction']
+        return energy
 
-    
     def getBandGap(self):
         if self.isMaster:
             self.communicator.bcast(('bandgap', 0))
         return self.k_point_set.band_gap()
-
 
     def getFermiEnergy(self):
         if self.isMaster:
             self.communicator.bcast(('fermienergy', 0))
         return self.k_point_set.energy_fermi()
 
-
     def getForces(self):
         if self.isMaster:
             self.communicator.bcast(('forces', 0))
-        return np.array(self.dft.forces().calc_forces_total()).T
+        return np.array(self.dft.forces().calc_forces_total(self.scfCorrection)).T
 
     def getStress(self):
         if self.isMaster:

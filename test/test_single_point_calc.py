@@ -21,7 +21,8 @@ use_asap = False
 #                           symbol='Si',
 #                           size=(1, 1, 1),
 #                           pbc=True)
-atoms = Diamond('Si')
+atoms = read('toto/2.extxyz')
+atoms.rattle(0.01)
 
 
 pp_files = {'Si' : 'Si.json'}
@@ -29,7 +30,7 @@ pw_cutoff = 400 # in a.u.^-1
 gk_cutoff = 100 # in a.u.^-1
 functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
 kpoints = np.array([2, 2, 2])
-kshift = np.array([0, 0, 0])
+kshift = np.array([1, 1, 1])
 
 
 jsonparams = {
@@ -40,14 +41,14 @@ jsonparams = {
         
     },
     "control" : {
-        "verbosity" : 1,
+        "verbosity" : 0,
         "processing_unit" : 'auto',
     },
     'parameters': {
         'use_symmetry': True,
         'smearing_width' : 0.001,
         'energy_tol' : 1e-7,
-        'density_tol' : 1e-8
+        'density_tol' : 1e-7
     }
 }
 
@@ -55,13 +56,13 @@ jsonparams = {
 
 atoms.calc = siriusCalculator.SIRIUS(atoms, pp_files, functionals, kpoints, kshift, pw_cutoff, gk_cutoff, jsonparams)
 
-# opt = sqnm.vcsqnm_for_ase.aseOptimizer(atoms, True)
-# for i in range(20):
-#     opt.step(atoms)
-#     print(atoms.get_potential_energy(), np.max(np.abs(atoms.get_forces())), np.max(np.abs((atoms.get_stress())) )
-#     print('etot', atoms.get_potential_energy())
-#     print('bandgap', atoms.calc.getBandGap())
-#     print('fermienergy', atoms.calc.getFermiEnergy())
+opt = sqnm.vcsqnm_for_ase.aseOptimizer(atoms, True)
+for i in range(20):
+    opt.step(atoms)
+    print(atoms.get_potential_energy(), np.max(np.abs(atoms.get_forces())), np.max(np.abs((atoms.get_stress())) ) )
+    print('etot', atoms.get_potential_energy())
+    print('bandgap', atoms.calc.getBandGap())
+    print('fermienergy', atoms.calc.getFermiEnergy())
 
 print('etot', atoms.get_potential_energy())
 print('bandgap', atoms.calc.getBandGap())
