@@ -174,7 +174,7 @@ class siriusInterface:
         if self.isMaster:
             self.communicator.bcast(('findGroundState', [pos, lat]))
 
-        tester = np.linalg.norm(self.initialLattice - lat, axis=1) < 0.01 * np.linalg.norm(self.initialLattice, axis=1)
+        # tester = np.linalg.norm(self.initialLattice - lat, axis=1) < 0.01 * np.linalg.norm(self.initialLattice, axis=1)
         # print('finding ground state', tester)
 
         # if self.first_eval and np.max(np.abs(self.initialPositions - pos)) < 1.e-10 and np.max(np.abs(self.initialLattice - lat)) < 1.e-10:
@@ -244,12 +244,14 @@ class siriusInterface:
     def getForces(self):
         if self.isMaster:
             self.communicator.bcast(('forces', 0))
-        return np.array(self.dft.forces().calc_forces_total(self.scfCorrection)).T
+        force_view = np.asarray(self.dft.forces().calc_forces_total(self.scfCorrection)).T
+        return np.array(force_view)
 
     def getStress(self):
         if self.isMaster:
             self.communicator.bcast(('stress', 0))
-        return np.array(self.dft.stress().calc_stress_total())
+        stress_view = np.asarray(self.dft.stress().calc_stress_total())
+        return np.array(stress_view)
 
     def getEnergyForcesStress(self, pos, lat):
         self.findGroundState(pos, lat)
