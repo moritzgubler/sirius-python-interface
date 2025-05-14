@@ -47,13 +47,6 @@ def main():
     result = dft.find(1e-6, 1e-6, 1e-2, 100, False)
     # print(json.dumps(result, indent=2))
 
-
-    # Extracting stress is working: 
-    stressSirius = dft.stress()
-    print('type of siriusForces', type(stressSirius))
-    stress = stressSirius.calc_stress_total()
-    print('stress', stress)
-
     # Now I try to extract forces
     siriusForces = dft.forces()
     print('type of siriusForces', type(siriusForces))
@@ -62,10 +55,19 @@ def main():
     # none of those work, all return a sddk::mdarray<double, 2> object which does not seem to be python compatible
     # forces = siriusForces.total
     # forces = siriusForces.total()
-    forces = numpy.array(siriusForces.calc_forces_total())
-    print(forces)
 
-    print('ef', kgrid.energy_fermi(), 'bandgap', kgrid.band_gap())
+    forces = siriusForces.calc_forces_total(True)
+    force_numpy = numpy.array(numpy.asarray(forces))
+    # print("first force element", forces[1])
+    print("numpy array of forces", force_numpy)
+
+    stressSirius = dft.stress()
+    print('type of sirius stress', type(stressSirius))
+    stress = stressSirius.calc_stress_total()
+    stress = numpy.array(numpy.asarray(stress))
+    print(stress)
+
+    # print('ef', kgrid.energy_fermi(), 'bandgap', kgrid.band_gap())
 
 if __name__ == "__main__":
     main()

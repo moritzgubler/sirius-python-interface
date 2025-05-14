@@ -21,7 +21,7 @@ use_asap = False
 #                           symbol='Si',
 #                           size=(1, 1, 1),
 #                           pbc=True)
-atoms = read('toto/2.extxyz')
+atoms = read('0002.extxyz')
 atoms.rattle(0.01)
 
 
@@ -29,8 +29,8 @@ pp_files = {'Si' : 'Si.json'}
 pw_cutoff = 400 # in a.u.^-1
 gk_cutoff = 100 # in a.u.^-1
 functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
-kpoints = np.array([2, 2, 2])
-kshift = np.array([1, 1, 1])
+kpoints = np.array([1, 1, 1])
+kshift = np.array([0, 0, 0])
 
 
 jsonparams = {
