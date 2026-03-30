@@ -38,9 +38,11 @@ class SIRIUS(Calculator):
         K-point grid shift: 0 for no shift, 1 for a shift of 0.5/N_k in that
         direction.
     pw_cutoff : float
-        Plane-wave basis cutoff in Ry.
+        Density/potential plane-wave cutoff in Ry (SIRIUS: ``pw_cutoff``;
+        QE equivalent: ``ecutrho``).
     gk_cutoff : float
-        Cutoff for the G+k vectors (augmented wave functions) in Ry.
+        Wavefunction |G+k| cutoff in Ry (SIRIUS: ``gk_cutoff``;
+        QE equivalent: ``ecutwfc``).
     json_params : dict
         Additional SIRIUS parameters.  At minimum the ``"mixer"``,
         ``"control"``, and ``"parameters"`` sections should be provided.
@@ -150,9 +152,11 @@ class SIRIUS(Calculator):
         kshift : numpy.ndarray, shape (3,), optional
             New k-point shift.  If None, the current shift is kept.
         pw_cutoff : float, optional
-            New plane-wave cutoff in Ry.  If None, the current value is kept.
+            New density/potential cutoff in Ry (QE: ``ecutrho``).
+            If ``None``, the current value is kept.
         gk_cutoff : float, optional
-            New G+k cutoff in Ry.  If None, the current value is kept.
+            New wavefunction |G+k| cutoff in Ry (QE: ``ecutwfc``).
+            If ``None``, the current value is kept.
         """
         paramdict= {
             'atomNames': atoms.get_chemical_symbols(),

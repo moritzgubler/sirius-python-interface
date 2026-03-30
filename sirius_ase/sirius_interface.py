@@ -70,9 +70,11 @@ class siriusInterface:
         kshift : numpy.ndarray, shape (3,)
             K-point grid shifts (0 or 1).
         pw_cutoff : float
-            Plane-wave cutoff in Ry.
+            Density/potential plane-wave cutoff in Ry (SIRIUS: ``pw_cutoff``;
+            QE equivalent: ``ecutrho``).  Converted internally to a.u.^-1.
         gk_cutoff : float
-            G+k cutoff in Ry.
+            Wavefunction |G+k| cutoff in Ry (SIRIUS: ``gk_cutoff``;
+            QE equivalent: ``ecutwfc``).  Converted internally to a.u.^-1.
         json_params : dict
             SIRIUS parameter dictionary.
         communicator : mpi4py.MPI.Comm, optional
