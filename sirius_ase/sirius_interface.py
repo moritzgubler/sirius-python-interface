@@ -7,6 +7,12 @@ import logging
 import sys
 
 class siriusInterface:
+    """Low-level wrapper around the SIRIUS C++ library.  Internal use only.
+
+    All positions and lattice vectors use atomic units (Bohr).
+    All energies, forces, and stresses are returned in atomic units
+    (Hartree, Hartree/Bohr, Hartree/Bohr^3).
+    """
 
     communicator = None
     isMaster = False
@@ -45,6 +51,36 @@ class siriusInterface:
 
     def __init__(self, pos: np.array, lat: np.array, atomNames: list, pp_files: dict, functionals, kpoints: np.array
             , kshift: np.array, pw_cutoff: float, gk_cutoff: float, json_params :dict, communicator: MPI.Comm = MPI.COMM_WORLD, returnWorkers: bool = False):
+        """Initialize SIRIUS and block worker ranks in a message loop.
+
+        Parameters
+        ----------
+        pos : numpy.ndarray, shape (N, 3)
+            Fractional (scaled) atomic positions.
+        lat : numpy.ndarray, shape (3, 3)
+            Lattice vectors in Bohr; rows are vectors.
+        atomNames : list[str]
+            Chemical symbol for each atom, length N.
+        pp_files : dict[str, str]
+            Element to pseudopotential file path mapping.
+        functionals : list[str]
+            XC functional codes (libxc naming).
+        kpoints : numpy.ndarray, shape (3,)
+            K-point grid dimensions.
+        kshift : numpy.ndarray, shape (3,)
+            K-point grid shifts (0 or 1).
+        pw_cutoff : float
+            Plane-wave cutoff in Ry.
+        gk_cutoff : float
+            G+k cutoff in Ry.
+        json_params : dict
+            SIRIUS parameter dictionary.
+        communicator : mpi4py.MPI.Comm, optional
+            MPI communicator.  Defaults to ``MPI.COMM_WORLD``.
+        returnWorkers : bool, optional
+            If True, worker ranks also return from ``__init__`` instead of
+            entering the message loop.  Defaults to False.
+        """
 
         self.pp_files = pp_files
         self.communicator = communicator
@@ -81,6 +117,7 @@ class siriusInterface:
             self.worker_loop()
 
     def createSiriusObjects(self, atomNames: list, pos, lat):
+        """Build the SIRIUS context, k-point set, and DFT ground-state solver."""
         self.jsonString = json.dumps(self.paramDict)
         self.context = sirius.Simulation_context(self.jsonString, self.sirius_communicator)
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
@@ -116,6 +153,7 @@ class siriusInterface:
         self.dft.initial_state()
 
     def setDefaultParameters(self):
+        """Extract convergence tolerances from paramDict into instance attributes."""
         if 'num_dft_iter' in self.paramDict['parameters']:
             self.num_dft_iter = self.paramDict['parameters']['num_dft_iter']
         # else:
@@ -139,6 +177,7 @@ class siriusInterface:
 
 
     def worker_loop(self):
+        """Block non-master MPI ranks, dispatching broadcasted messages indefinitely."""
         messageTag = 'asdf'
         data = 0
         message = (messageTag, data)
@@ -166,10 +205,12 @@ class siriusInterface:
                 quit()
 
     def exit(self):
+        """Broadcast the exit signal so all worker ranks terminate."""
         if self.isMaster:
             self.communicator.bcast(('exit', 0))
 
     def findGroundState(self, pos, lat):
+        """Run the SCF calculation, updating geometry if it has changed."""
         # print(pos, lat)
         if self.isMaster:
             self.communicator.bcast(('findGroundState', [pos, lat]))
@@ -190,8 +231,9 @@ class siriusInterface:
             print("Converged charge density has negative values. Don't trust the result")
 
 
-    def resetSirius(self, atomNames: list, pos, lat, kpoints: np.array = None, 
+    def resetSirius(self, atomNames: list, pos, lat, kpoints: np.array = None,
                     kshift: np.array = None, pw_cutoff: float = None, gk_cutoff: float= None):
+        """Completely reinitialize SIRIUS context, k-point set, and DFT solver."""
         if kpoints is not None:
             self.kpoints = kpoints
         if kshift is not None:
@@ -217,6 +259,7 @@ class siriusInterface:
 
 
     def updateSirius(self, pos, lat):
+        """Update atomic positions and lattice vectors in-place without reinitializing."""
         self.context.unit_cell().set_lattice_vectors(lat[0, :], lat[1,:], lat[2, :])
         for i, p in enumerate(pos):
             self.context.unit_cell().atom(i).set_position(p)
@@ -224,6 +267,7 @@ class siriusInterface:
 
 
     def getEnergy(self):
+        """Return total energy in Hartree."""
         if self.isMaster:
             self.communicator.bcast(('energy', 0))
         energy = self.dftRresult['energy']['total']
@@ -232,33 +276,39 @@ class siriusInterface:
         return energy
 
     def getBandGap(self):
+        """Return band gap in Hartree."""
         if self.isMaster:
             self.communicator.bcast(('bandgap', 0))
         return self.k_point_set.band_gap()
 
     def getFermiEnergy(self):
+        """Return Fermi energy in Hartree."""
         if self.isMaster:
             self.communicator.bcast(('fermienergy', 0))
         return self.k_point_set.energy_fermi()
 
     def getForces(self):
+        """Return atomic forces in Hartree/Bohr, shape (N, 3)."""
         if self.isMaster:
             self.communicator.bcast(('forces', 0))
         force_view = np.asarray(self.dft.forces().calc_forces_total(self.scfCorrection)).T
         return np.array(force_view)
 
     def getStress(self):
+        """Return stress tensor in Hartree/Bohr^3, shape (3, 3)."""
         if self.isMaster:
             self.communicator.bcast(('stress', 0))
         stress_view = np.asarray(self.dft.stress().calc_stress_total())
         return np.array(stress_view)
 
     def getEnergyForcesStress(self, pos, lat):
+        """Run SCF and return (energy, forces, stress) in atomic units."""
         self.findGroundState(pos, lat)
         return self.getEnergy(), self.getForces() , self.getStress() 
 
 
 def createChapters(json_params):
+    """Ensure all required top-level sections exist in a SIRIUS parameter dict."""
     chapters = ['mixer', 'settings', 'unit_cell', 'iterative_solver', 'control', 'parameters', 'nlcg', 'hubbard']
     for chap in chapters:
         if chap not in json_params:

@@ -1,6 +1,7 @@
 import numpy as np
 
 class kpoint:
+    """A k-point with k -> -k symmetry coordinates and a weight.  Internal use."""
 
     def __init__(self, k, weight = 1) -> None:
         self.k = np.array(k)
@@ -32,7 +33,23 @@ class kpoint:
     def __eq__(self, __o: object) -> bool:
         return hash(self) == hash(__o)
 
-def createGridAndWeights(kpoints = [3, 3, 3], kshift = [0, 0, 0]):
+def createGridAndWeights(kpoints=[3, 3, 3], kshift=[0, 0, 0]):
+    """Generate a uniform k-point grid with k -> -k symmetry reduction.
+
+    Parameters
+    ----------
+    kpoints : array-like of int, length 3
+        Number of grid points along each reciprocal lattice direction.
+    kshift : array-like of int, length 3
+        Shift flags: 0 = no shift, 1 = shift by 0.5/N_k in that direction.
+
+    Returns
+    -------
+    list of tuple
+        Each entry is (k_coords, weight) where k_coords is a list of three
+        floats (fractional reciprocal coordinates) and weight is a float.
+        Weights sum to 1 over all k-points.
+    """
     ks = list(kshift)
     kpoints = np.array(kpoints)
     totalPoints = kpoints[0] * kpoints[1] * kpoints[2]
