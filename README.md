@@ -16,12 +16,13 @@ pp_files = {
     # https://github.com/electronic-structure/species
     'Si': 'Si.json'
 }
-# Plane wave and density cutoff in Ry.
-pw_cutoff = 450 # in a.u.^-1
-gk_cutoff = 100 # in a.u.^-1
-functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
-kpoints = np.array([2, 2, 2])
-kshift = np.array([1, 1, 1])
+# Cutoffs in Ry.
+# Note: SIRIUS uses a.u.^-1 internally; this interface accepts Ry and converts.
+pw_cutoff = 450 # density/potential cutoff in Ry (in Quantum ESPRESSO: ecutrho)
+gk_cutoff = 100 # wavefunction |G+k| cutoff in Ry (Quantum ESPRESSO: ecutwfc)
+functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"] # naming convention: XC_{LIBXC code}
+kpoints = np.array([2, 2, 2]) # 2 x 2 x 2 k point grid
+kshift = np.array([1, 1, 1]) # shift of 0.5 across specified directions
 
 # Additional parameters can be passed with the json params dictionary. 
 jsonparams = {
@@ -75,3 +76,9 @@ pip install .
 
 ### Command line interface
 After the installation with pip the executable ```SiriusSinglePoint``` is added to the path in the pip directory. Check the installation and the documentation with ```SiriusSinglePoint -h```. The program reads a json file that contains the sirius parameters and a list of ase compatible periodic structure files. The energies, forces and stress tensor will be written into a new extxyz file.
+
+A ready-to-run example with input files is provided in the [example/](example/) directory:
+```
+mpirun -np 4 SiriusSinglePoint --sirius_parameters params.json --geometry test.extxyz
+```
+Omit `mpirun -np 4` to run serially.

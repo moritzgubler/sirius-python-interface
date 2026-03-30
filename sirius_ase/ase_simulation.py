@@ -12,6 +12,7 @@ import logging
 import time
 
 def entry():
+    """CLI entry point for ``SiriusSinglePoint``: batch single-point DFT calculations."""
 
     parser = argparse.ArgumentParser(description ="""
     Reads sirius paramater and an ase list of structures (extxyz format is recommended)
@@ -115,6 +116,7 @@ def entry():
     calc.close()
 
 def geopt():
+    """CLI entry point for ``SiriusGeometryOpt``: variable-cell geometry optimization."""
 
     parser = argparse.ArgumentParser(description ="""
     Reads sirius paramater and an ase list of structures (extxyz format is recommended)
