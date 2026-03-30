@@ -17,11 +17,11 @@ pp_files = {
     'Si': 'Si.json'
 }
 # Plane wave and density cutoff in Ry.
-pw_cutoff = 450 # in a.u.^-1
-gk_cutoff = 100 # in a.u.^-1
-functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"]
-kpoints = np.array([2, 2, 2])
-kshift = np.array([1, 1, 1])
+pw_cutoff = 450 # in Ry
+gk_cutoff = 100 # in Ry
+functionals = ["XC_GGA_X_PBE", "XC_GGA_C_PBE"] # naming convention: XC_{LIBXC code}
+kpoints = np.array([2, 2, 2]) # 2 x 2 x 2 k point grid
+kshift = np.array([1, 1, 1]) # shift of 0.5 across specified directions
 
 # Additional parameters can be passed with the json params dictionary. 
 jsonparams = {
