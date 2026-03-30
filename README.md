@@ -75,3 +75,9 @@ pip install .
 
 ### Command line interface
 After the installation with pip the executable ```SiriusSinglePoint``` is added to the path in the pip directory. Check the installation and the documentation with ```SiriusSinglePoint -h```. The program reads a json file that contains the sirius parameters and a list of ase compatible periodic structure files. The energies, forces and stress tensor will be written into a new extxyz file.
+
+A ready-to-run example with input files is provided in the [example/](example/) directory:
+```
+mpirun -np 4 SiriusSinglePoint --sirius_parameters params.json --geometry test.extxyz
+```
+Omit `mpirun -np 4` to run serially.
